@@ -35,7 +35,12 @@ fn grow_viewport(
     new_height: u16,
 ) -> Result<Terminal<CrosstermBackend<Stdout>>> {
     let area = terminal.get_frame().area();
-    crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
+    crossterm::execute!(
+        std::io::stdout(),
+        crossterm::cursor::MoveTo(0, area.y + area.height - 1),
+        crossterm::terminal::Clear(crossterm::terminal::ClearType::CurrentLine),
+        crossterm::cursor::MoveTo(0, area.y),
+    )?;
     drop(terminal);
     let backend = CrosstermBackend::new(std::io::stdout());
     let new_terminal = Terminal::with_options(
