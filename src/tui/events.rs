@@ -37,17 +37,24 @@ fn grow_viewport(
     let area = terminal.get_frame().area();
     crossterm::execute!(
         std::io::stdout(),
-        crossterm::cursor::MoveTo(0, area.y + area.height - 1),
-        crossterm::terminal::Clear(crossterm::terminal::ClearType::CurrentLine),
         crossterm::cursor::MoveTo(0, area.y),
     )?;
     drop(terminal);
     let backend = CrosstermBackend::new(std::io::stdout());
-    let new_terminal = Terminal::with_options(
+    let mut new_terminal = Terminal::with_options(
         backend,
         TerminalOptions {
             viewport: Viewport::Inline(new_height),
         },
+    )?;
+    // Clear the viewport area so the physical screen matches the new
+    // terminal's empty previous-frame buffer. Without this, default/space
+    // cells are skipped by the diff and old border chars bleed through.
+    let new_area = new_terminal.get_frame().area();
+    crossterm::execute!(
+        std::io::stdout(),
+        crossterm::cursor::MoveTo(new_area.x, new_area.y),
+        crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
     )?;
     Ok(new_terminal)
 }
