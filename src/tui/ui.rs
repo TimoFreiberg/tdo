@@ -11,18 +11,23 @@ pub fn draw(f: &mut Frame, app: &App) {
         .constraints([Constraint::Min(1), Constraint::Length(1)])
         .split(f.area());
 
+    draw_list(f, app, chunks[0]);
+
     match &app.mode {
         Mode::Normal => {
-            draw_list(f, app, chunks[0]);
             draw_help(
                 f,
-                "j/k: navigate  e/Enter: edit  d: done  n: new  q/Esc: quit",
+                "j/k: navigate  e: edit  d: done/reopen  x: delete  n: new  a: all  q: quit",
                 chunks[1],
             );
         }
         Mode::NewTodo { input } => {
-            draw_list(f, app, chunks[0]);
             draw_input(f, "New todo: ", input, chunks[1]);
+        }
+        Mode::ConfirmDelete { title, .. } => {
+            let text = format!("Delete '{title}'? y: confirm  Esc: cancel");
+            let widget = Paragraph::new(text);
+            f.render_widget(widget, chunks[1]);
         }
     }
 }
@@ -33,12 +38,20 @@ fn draw_list(f: &mut Frame, app: &App, area: Rect) {
         .iter()
         .enumerate()
         .map(|(i, todo)| {
-            let style = if i == app.cursor {
-                Style::default().add_modifier(Modifier::REVERSED)
+            let label = if todo.is_open() {
+                format!("{}  {}", todo.id, todo.title())
+            } else {
+                format!("{}  [done] {}", todo.id, todo.title())
+            };
+            let mut style = if !todo.is_open() {
+                Style::default().fg(Color::DarkGray)
             } else {
                 Style::default()
             };
-            ListItem::new(format!("{}  {}", todo.id, todo.title())).style(style)
+            if i == app.cursor {
+                style = style.add_modifier(Modifier::REVERSED);
+            }
+            ListItem::new(label).style(style)
         })
         .collect();
 

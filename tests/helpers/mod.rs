@@ -47,13 +47,18 @@ impl TdoTest {
         String::from_utf8(output.stderr).unwrap().trim().to_string()
     }
 
-    /// List files in the todo directory.
+    /// List todo files (*.md) in the todo directory.
     pub fn files(&self) -> Vec<String> {
         std::fs::read_dir(self.dir.path())
             .unwrap()
             .filter_map(|e| {
                 let e = e.ok()?;
-                Some(e.file_name().to_string_lossy().to_string())
+                let name = e.file_name().to_string_lossy().to_string();
+                if name.ends_with(".md") {
+                    Some(name)
+                } else {
+                    None
+                }
             })
             .collect()
     }

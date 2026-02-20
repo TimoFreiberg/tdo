@@ -6,7 +6,7 @@ use clap::Parser;
 #[command(
     name = "tdo",
     about = "A local todo manager",
-    override_usage = "tdo [TEXT]...\n       tdo --edit <ID> [--title <TEXT>] [--body <TEXT>]\n       tdo --done <ID>\n       tdo --delete <ID>\n       tdo --list [--all]"
+    override_usage = "tdo [TEXT]...\n       tdo --edit <ID> [--title <TEXT>] [--body <TEXT>]\n       tdo --done <ID>\n       tdo --reopen <ID>\n       tdo --delete <ID> [--force]\n       tdo --list [--all]"
 )]
 pub struct Cli {
     /// Words that become the title of a new todo
@@ -14,19 +14,23 @@ pub struct Cli {
     pub text: Vec<String>,
 
     /// Open todo in $EDITOR (or update non-interactively with --title/--body)
-    #[arg(long, value_name = "ID", conflicts_with_all = ["done", "delete", "list"])]
+    #[arg(long, value_name = "ID", conflicts_with_all = ["done", "reopen", "delete", "list"])]
     pub edit: Option<String>,
 
     /// Mark a todo as done
-    #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "delete", "list"])]
+    #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "reopen", "delete", "list"])]
     pub done: Option<String>,
 
+    /// Reopen a done todo
+    #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "done", "delete", "list"])]
+    pub reopen: Option<String>,
+
     /// Delete a todo
-    #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "done", "list"])]
+    #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "done", "reopen", "list"])]
     pub delete: Option<String>,
 
     /// List todos
-    #[arg(long, conflicts_with_all = ["edit", "done", "delete"])]
+    #[arg(long, conflicts_with_all = ["edit", "done", "reopen", "delete"])]
     pub list: bool,
 
     /// With --list: include done todos
@@ -41,6 +45,10 @@ pub struct Cli {
     #[arg(long, value_name = "TEXT", requires = "edit")]
     pub body: Option<String>,
 
+    /// Skip confirmation prompt (for --delete)
+    #[arg(long, requires = "delete")]
+    pub force: bool,
+
     /// Override .todo/ directory location
     #[arg(long, value_name = "PATH")]
     pub dir: Option<PathBuf>,
@@ -54,7 +62,11 @@ pub enum Command {
         body: Option<String>,
     },
     Done(String),
-    Delete(String),
+    Reopen(String),
+    Delete {
+        id: String,
+        force: bool,
+    },
     List {
         all: bool,
     },
@@ -76,8 +88,14 @@ pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
     if let Some(id) = &cli.done {
         return Command::Done(id.clone());
     }
+    if let Some(id) = &cli.reopen {
+        return Command::Reopen(id.clone());
+    }
     if let Some(id) = &cli.delete {
-        return Command::Delete(id.clone());
+        return Command::Delete {
+            id: id.clone(),
+            force: cli.force,
+        };
     }
     if cli.list {
         return Command::List { all: cli.all };

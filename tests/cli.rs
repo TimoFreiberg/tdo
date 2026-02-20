@@ -76,9 +76,21 @@ fn delete_removes_file() {
     let id = t.run_ok(&["delete me"]);
     assert_eq!(t.files().len(), 1);
 
-    // Non-interactive delete (piped stdin) should skip confirmation
-    t.run_ok(&["--delete", &id]);
+    // Non-interactive delete requires --force
+    t.run_ok(&["--delete", &id, "--force"]);
     assert_eq!(t.files().len(), 0);
+}
+
+#[test]
+fn delete_without_force_fails_non_interactive() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["delete me"]);
+
+    let err = t.run_err(&["--delete", &id]);
+    assert!(err.contains("--force"), "expected --force hint, got: {err}");
+
+    // File should still exist
+    assert_eq!(t.files().len(), 1);
 }
 
 #[test]
@@ -103,6 +115,19 @@ fn edit_non_interactive_body() {
     let path = t.dir.path().join(&files[0]);
     let content = std::fs::read_to_string(path).unwrap();
     assert!(content.contains("detailed notes here"));
+}
+
+#[test]
+fn edit_non_interactive_no_flags_fails() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["edit me"]);
+
+    // Non-interactive edit with no --title/--body should fail
+    let err = t.run_err(&["--edit", &id]);
+    assert!(
+        err.contains("--title") || err.contains("--body"),
+        "expected hint about --title/--body, got: {err}"
+    );
 }
 
 #[test]
@@ -131,4 +156,63 @@ fn multiple_creates_unique_ids() {
     assert_ne!(id1, id2);
     assert_ne!(id2, id3);
     assert_ne!(id1, id3);
+}
+
+#[test]
+fn reopen_marks_status() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["reopen me"]);
+    t.run_ok(&["--done", &id]);
+
+    // Verify it's done
+    let files = t.files();
+    let path = t.dir.path().join(&files[0]);
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("status: done"));
+
+    // Reopen it
+    t.run_ok(&["--reopen", &id]);
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("status: open"));
+}
+
+#[test]
+fn prefix_matching() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["prefix test"]);
+
+    // Use first 2 chars as prefix
+    let prefix = &id[..2];
+    t.run_ok(&["--done", prefix]);
+
+    let list = t.run_ok(&["--list", "--all"]);
+    assert!(list.contains("[done]"));
+}
+
+#[test]
+fn done_prints_feedback() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["feedback test"]);
+
+    let output = t.run(&["--done", &id]);
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("done:") && stderr.contains(&id),
+        "expected feedback on stderr, got: {stderr}"
+    );
+}
+
+#[test]
+fn delete_prints_feedback() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["feedback delete"]);
+
+    let output = t.run(&["--delete", &id, "--force"]);
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("deleted:") && stderr.contains(&id),
+        "expected feedback on stderr, got: {stderr}"
+    );
 }

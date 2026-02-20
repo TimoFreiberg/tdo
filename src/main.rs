@@ -15,21 +15,33 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let is_tty = util::stdout_is_tty();
     let dir = Store::resolve_dir(cli.dir.as_deref());
-    let store = Store::open(&dir)?;
+    let mut store = Store::open(&dir)?;
 
     match cli::resolve_command(&cli, is_tty) {
         Command::Create(title) => {
-            let id = ops::create_todo(&store, &title)?;
+            let id = ops::create_todo(&mut store, &title)?;
             println!("{id}");
         }
         Command::Edit { id, title, body } => {
             let interactive = is_tty && title.is_none() && body.is_none();
-            ops::edit_todo(&store, &id, title.as_deref(), body.as_deref(), interactive)?;
+            ops::edit_todo(&mut store, &id, title.as_deref(), body.as_deref(), interactive)?;
         }
-        Command::Done(id) => ops::mark_done(&store, &id)?,
-        Command::Delete(id) => ops::delete_todo(&store, &id, is_tty)?,
-        Command::List { all } => ops::list_todos(&store, all)?,
-        Command::PlainList => ops::list_todos(&store, false)?,
+        Command::Done(id) => {
+            let (full_id, title) = ops::mark_done(&mut store, &id)?;
+            eprintln!("done: {full_id}  {title}");
+        }
+        Command::Reopen(id) => {
+            let (full_id, title) = ops::reopen_todo(&mut store, &id)?;
+            eprintln!("reopened: {full_id}  {title}");
+        }
+        Command::Delete { id, force } => {
+            match ops::delete_todo(&mut store, &id, is_tty, force)? {
+                Some((full_id, title)) => eprintln!("deleted: {full_id}  {title}"),
+                None => eprintln!("cancelled"),
+            }
+        }
+        Command::List { all } => ops::list_todos(&mut store, all)?,
+        Command::PlainList => ops::list_todos(&mut store, false)?,
         Command::Tui => tui::run_tui(store)?,
     }
     Ok(())

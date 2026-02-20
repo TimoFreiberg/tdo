@@ -32,6 +32,7 @@ fn handle_key(
     match &app.mode {
         Mode::Normal => handle_normal(terminal, app, key),
         Mode::NewTodo { .. } => handle_new_todo(app, key),
+        Mode::ConfirmDelete { .. } => handle_confirm_delete(app, key),
     }
 }
 
@@ -47,15 +48,29 @@ fn handle_normal(
         KeyCode::Char('d') => {
             if let Some(todo) = app.selected() {
                 let id = todo.id.clone();
-                ops::mark_done(&app.store, &id)?;
+                if todo.is_open() {
+                    ops::mark_done(&mut app.store, &id)?;
+                } else {
+                    ops::reopen_todo(&mut app.store, &id)?;
+                }
             }
+        }
+        KeyCode::Char('x') => {
+            if let Some(todo) = app.selected() {
+                app.mode = Mode::ConfirmDelete {
+                    id: todo.id.clone(),
+                    title: todo.title().to_string(),
+                };
+            }
+        }
+        KeyCode::Char('a') => {
+            app.show_all = !app.show_all;
         }
         KeyCode::Enter | KeyCode::Char('e') => {
             if let Some(todo) = app.selected() {
                 let id = todo.id.clone();
                 // Suspend TUI for editor
                 crossterm::terminal::disable_raw_mode()?;
-                // Move cursor below viewport so editor starts on a clean line
                 let viewport = terminal.get_frame().area();
                 crossterm::execute!(
                     std::io::stdout(),
@@ -63,11 +78,16 @@ fn handle_normal(
                     crossterm::cursor::Show,
                 )?;
 
-                ops::edit_todo(&app.store, &id, None, None, true)?;
+                let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
 
-                // Resume TUI
+                // Editor may have changed the file; invalidate cache
+                app.store.invalidate();
+
+                // Resume TUI regardless of edit result
                 crossterm::terminal::enable_raw_mode()?;
                 terminal.clear()?;
+
+                edit_result?;
             }
         }
         KeyCode::Char('n') => {
@@ -85,7 +105,7 @@ fn handle_new_todo(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>> {
         match key.code {
             KeyCode::Enter => {
                 if !input.is_empty() {
-                    ops::create_todo(&app.store, &input.clone())?;
+                    ops::create_todo(&mut app.store, &input.clone())?;
                 }
                 app.mode = Mode::Normal;
             }
@@ -98,6 +118,26 @@ fn handle_new_todo(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>> {
             }
             _ => {}
         }
+    }
+    Ok(ControlFlow::Continue(()))
+}
+
+fn handle_confirm_delete(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>> {
+    let id = if let Mode::ConfirmDelete { ref id, .. } = app.mode {
+        id.clone()
+    } else {
+        return Ok(ControlFlow::Continue(()));
+    };
+
+    match key.code {
+        KeyCode::Char('y') => {
+            app.store.delete(&id)?;
+            app.mode = Mode::Normal;
+        }
+        KeyCode::Char('n') | KeyCode::Esc => {
+            app.mode = Mode::Normal;
+        }
+        _ => {}
     }
     Ok(ControlFlow::Continue(()))
 }
