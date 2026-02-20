@@ -1,11 +1,7 @@
 # TODO
 
-## TUI: scroll support (#4)
-
-The TUI renders a flat `List` with no scrolling. If there are more open todos
-than fit in the viewport (MAX_HEIGHT - 3 = 17 items), the cursor can move past
-the visible area. Switch to ratatui's stateful `ListState` rendering which
-handles scroll-to-cursor automatically.
+## TUI: Grow TUI space when items are added
+When the list is initialized with space for 2 TODOs and i add a third, the list should grow to show all 3
 
 ## TUI: empty state message (#5)
 
