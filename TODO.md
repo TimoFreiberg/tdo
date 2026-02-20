@@ -1,29 +1,5 @@
 # TODO
 
-## TUI: empty state message (#5)
-
-When there are zero open todos, the TUI shows an empty bordered box. Add an
-empty-state message like "No open todos. Press n to create one." inside the
-list area for first-run discoverability.
-
-## TUI: handle terminal resize events (#13)
-
-Only `Event::Key` is handled in the event loop. Terminal resize events are
-ignored, so resizing the terminal while the TUI is open corrupts the display
-until the next keypress. Handle `Event::Resize` to trigger a redraw.
-
-## Consider subcommand interface (#14)
-
-The flag-based interface (`tdo --done <id>`) is unusual for CLI tools. Most
-users expect subcommands (`tdo done <id>`). Consider offering both via clap
-aliases, or switching entirely to subcommands.
-
-## List output formatting (#16)
-
-`--list` output is plain `<id>  <title>` with no alignment or color. Adding
-colored IDs, column alignment, or other minimal formatting would improve
-scannability for larger lists.
-
 ## Decide error handling for malformed todo files
 
 `load_all_todos` silently skips `.md` files that fail to parse, printing a
