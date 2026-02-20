@@ -32,5 +32,6 @@ status: open
 Optional body content.
 ```
 
-Files are named by creation timestamp (`YYYYMMDD-HHMMSS.md`) and stored in
-`.todo/` relative to the current directory.
+Files are named `<hex>-<slug>.md` (e.g. `a3f9-fix-the-login-bug.md`) and
+stored in `.todo/` relative to the current directory. The hex prefix is the
+ID used in commands.

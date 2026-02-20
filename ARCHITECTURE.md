@@ -14,13 +14,16 @@ Todos live in `.todo/` relative to the working directory (overridable with
 
 ### Filename / ID scheme
 
-Files are named by creation timestamp: `YYYYMMDD-HHMMSS.md`.
+Files are named `<hex>-<slug>.md`, e.g. `a3f9-fix-the-login-bug.md`.
 
-If a file for that second already exists, append a counter:
-`YYYYMMDD-HHMMSS-1.md`, `YYYYMMDD-HHMMSS-2.md`, etc.
+- **hex** — 4 random hex characters. This is the todo's ID, used in all
+  commands (`tdo --done a3f9`). On collision, regenerate.
+- **slug** — slugified title, set once at creation. Cosmetic only — makes
+  `ls .todo/` browsable without opening files. Not updated on title edits.
 
-The filename (without `.md`) is the todo's ID. IDs are designed to be
-selectable via double-click in a terminal.
+Slugification: lowercase, replace non-alphanumeric runs with a single hyphen,
+strip leading/trailing hyphens, truncate to a reasonable length (~50 chars).
+If the slug is empty after sanitization, use the hex ID alone.
 
 ### File format
 
