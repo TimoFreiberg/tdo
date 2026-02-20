@@ -73,7 +73,7 @@ fn handle_normal(
     // Ctrl+key shortcuts (work regardless of cursor position)
     if ctrl {
         match key.code {
-            KeyCode::Char('q') => return Ok(ControlFlow::Break(())),
+            KeyCode::Char('q') | KeyCode::Char('c') => return Ok(ControlFlow::Break(())),
             KeyCode::Char('a') => {
                 app.show_all = !app.show_all;
                 app.reload();
