@@ -5,7 +5,7 @@ use helpers::TdoTest;
 #[test]
 fn create_prints_id_and_creates_file() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["hello", "world"]);
+    let id = t.run_ok(&["add", "hello", "world"]);
 
     // ID should be 4 hex chars
     assert_eq!(id.len(), 4, "expected 4-char hex id, got: '{id}'");
@@ -25,8 +25,8 @@ fn create_prints_id_and_creates_file() {
 #[test]
 fn list_shows_created_todo() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["buy milk"]);
-    let list = t.run_ok(&["--list"]);
+    let id = t.run_ok(&["add", "buy milk"]);
+    let list = t.run_ok(&["list"]);
     assert!(list.contains(&id));
     assert!(list.contains("buy milk"));
 }
@@ -34,14 +34,14 @@ fn list_shows_created_todo() {
 #[test]
 fn list_hides_done_todos() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["task one"]);
-    t.run_ok(&["task two"]);
+    let id = t.run_ok(&["add", "task one"]);
+    t.run_ok(&["add", "task two"]);
 
     // Mark first as done
-    t.run_ok(&["--done", &id]);
+    t.run_ok(&["done", &id]);
 
     // Regular list should only show task two
-    let list = t.run_ok(&["--list"]);
+    let list = t.run_ok(&["list"]);
     assert!(!list.contains(&id), "done todo should be hidden");
     assert!(list.contains("task two"));
 }
@@ -49,10 +49,10 @@ fn list_hides_done_todos() {
 #[test]
 fn list_all_shows_done_todos() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["task one"]);
-    t.run_ok(&["--done", &id]);
+    let id = t.run_ok(&["add", "task one"]);
+    t.run_ok(&["done", &id]);
 
-    let list = t.run_ok(&["--list", "--all"]);
+    let list = t.run_ok(&["list", "--all"]);
     assert!(list.contains(&id));
     assert!(list.contains("[done]"));
 }
@@ -60,8 +60,8 @@ fn list_all_shows_done_todos() {
 #[test]
 fn done_marks_status() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["do the thing"]);
-    t.run_ok(&["--done", &id]);
+    let id = t.run_ok(&["add", "do the thing"]);
+    t.run_ok(&["done", &id]);
 
     // Verify the file contains status: done
     let files = t.files();
@@ -73,8 +73,8 @@ fn done_marks_status() {
 #[test]
 fn reopen_marks_status() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["do the thing"]);
-    t.run_ok(&["--done", &id]);
+    let id = t.run_ok(&["add", "do the thing"]);
+    t.run_ok(&["done", &id]);
 
     // Verify it's done
     let files = t.files();
@@ -83,7 +83,7 @@ fn reopen_marks_status() {
     assert!(content.contains("status: done"));
 
     // Reopen it
-    t.run_ok(&["--reopen", &id]);
+    t.run_ok(&["reopen", &id]);
 
     let content = std::fs::read_to_string(&path).unwrap();
     assert!(content.contains("status: open"));
@@ -92,11 +92,11 @@ fn reopen_marks_status() {
 #[test]
 fn delete_requires_force_non_interactive() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["delete me"]);
+    let id = t.run_ok(&["add", "delete me"]);
     assert_eq!(t.files().len(), 1);
 
     // Without --force, non-interactive delete should fail
-    let err = t.run_err(&["--delete", &id]);
+    let err = t.run_err(&["delete", &id]);
     assert!(err.contains("--force"), "should mention --force: {err}");
     assert_eq!(t.files().len(), 1, "file should not be deleted");
 }
@@ -104,18 +104,18 @@ fn delete_requires_force_non_interactive() {
 #[test]
 fn delete_force_removes_file() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["delete me"]);
+    let id = t.run_ok(&["add", "delete me"]);
     assert_eq!(t.files().len(), 1);
 
-    t.run_ok(&["--delete", &id, "--force"]);
+    t.run_ok(&["delete", &id, "--force"]);
     assert_eq!(t.files().len(), 0);
 }
 
 #[test]
 fn edit_non_interactive_title() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["original title"]);
-    t.run_ok(&["--edit", &id, "--title", "updated title"]);
+    let id = t.run_ok(&["add", "original title"]);
+    t.run_ok(&["edit", &id, "--title", "updated title"]);
 
     let files = t.files();
     let path = t.dir.path().join(&files[0]);
@@ -126,8 +126,8 @@ fn edit_non_interactive_title() {
 #[test]
 fn edit_non_interactive_body() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["some task"]);
-    t.run_ok(&["--edit", &id, "--body", "detailed notes here"]);
+    let id = t.run_ok(&["add", "some task"]);
+    t.run_ok(&["edit", &id, "--body", "detailed notes here"]);
 
     let files = t.files();
     let path = t.dir.path().join(&files[0]);
@@ -138,10 +138,10 @@ fn edit_non_interactive_body() {
 #[test]
 fn edit_no_flags_non_interactive_fails() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["some task"]);
+    let id = t.run_ok(&["add", "some task"]);
 
     // Non-interactive edit with no title/body should fail
-    let err = t.run_err(&["--edit", &id]);
+    let err = t.run_err(&["edit", &id]);
     assert!(
         err.contains("non-interactively"),
         "should explain the error: {err}"
@@ -151,13 +151,13 @@ fn edit_no_flags_non_interactive_fails() {
 #[test]
 fn unknown_id_fails() {
     let t = TdoTest::new();
-    t.run_err(&["--done", "ffff"]);
+    t.run_err(&["done", "ffff"]);
 }
 
 #[test]
 fn no_args_non_interactive_lists_open() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["auto listed"]);
+    let id = t.run_ok(&["add", "auto listed"]);
 
     // Running with no args in a non-interactive context (piped)
     let list = t.run_ok(&[]);
@@ -168,9 +168,9 @@ fn no_args_non_interactive_lists_open() {
 #[test]
 fn multiple_creates_unique_ids() {
     let t = TdoTest::new();
-    let id1 = t.run_ok(&["first"]);
-    let id2 = t.run_ok(&["second"]);
-    let id3 = t.run_ok(&["third"]);
+    let id1 = t.run_ok(&["add", "first"]);
+    let id2 = t.run_ok(&["add", "second"]);
+    let id3 = t.run_ok(&["add", "third"]);
     assert_ne!(id1, id2);
     assert_ne!(id2, id3);
     assert_ne!(id1, id3);
@@ -179,11 +179,11 @@ fn multiple_creates_unique_ids() {
 #[test]
 fn prefix_id_match() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["prefix test"]);
+    let id = t.run_ok(&["add", "prefix test"]);
     // Use a 2-char prefix (should be unique with one todo)
     let prefix = &id[..2];
 
-    t.run_ok(&["--done", prefix]);
+    t.run_ok(&["done", prefix]);
 
     let files = t.files();
     let path = t.dir.path().join(&files[0]);
@@ -194,9 +194,9 @@ fn prefix_id_match() {
 #[test]
 fn done_prints_feedback() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["feedback test"]);
+    let id = t.run_ok(&["add", "feedback test"]);
 
-    let output = t.run(&["--done", &id]);
+    let output = t.run(&["done", &id]);
     assert!(output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains("done:"), "should print feedback: {stderr}");
@@ -207,10 +207,10 @@ fn done_prints_feedback() {
 #[test]
 fn reopen_prints_feedback() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["reopen test"]);
-    t.run_ok(&["--done", &id]);
+    let id = t.run_ok(&["add", "reopen test"]);
+    t.run_ok(&["done", &id]);
 
-    let output = t.run(&["--reopen", &id]);
+    let output = t.run(&["reopen", &id]);
     assert!(output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(
@@ -223,9 +223,9 @@ fn reopen_prints_feedback() {
 #[test]
 fn delete_force_prints_feedback() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["delete feedback"]);
+    let id = t.run_ok(&["add", "delete feedback"]);
 
-    let output = t.run(&["--delete", &id, "--force"]);
+    let output = t.run(&["delete", &id, "--force"]);
     assert!(output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(

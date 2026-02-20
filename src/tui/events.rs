@@ -2,7 +2,7 @@ use std::io::Stdout;
 use std::ops::ControlFlow;
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
 use ratatui::{Terminal, TerminalOptions, Viewport};
 
@@ -59,7 +59,6 @@ fn handle_key(
 ) -> Result<ControlFlow<()>> {
     match &app.mode {
         Mode::Normal => handle_normal(terminal, app, key),
-        Mode::NewTodo { .. } => handle_new_todo(app, key),
         Mode::ConfirmDelete { .. } => handle_confirm_delete(app, key),
     }
 }
@@ -69,81 +68,95 @@ fn handle_normal(
     app: &mut App,
     key: KeyEvent,
 ) -> Result<ControlFlow<()>> {
-    match key.code {
-        KeyCode::Char('q') | KeyCode::Esc => return Ok(ControlFlow::Break(())),
-        KeyCode::Char('j') | KeyCode::Down => app.cursor_down(),
-        KeyCode::Char('k') | KeyCode::Up => app.cursor_up(),
-        KeyCode::Char('d') => {
-            if let Some(todo) = app.selected_todo() {
-                let id = todo.id.clone();
-                let is_open = todo.is_open();
-                if is_open {
-                    ops::mark_done(&mut app.store, &id)?;
-                } else {
-                    ops::reopen_todo(&mut app.store, &id)?;
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+
+    // Ctrl+key shortcuts (work regardless of cursor position)
+    if ctrl {
+        match key.code {
+            KeyCode::Char('q') => return Ok(ControlFlow::Break(())),
+            KeyCode::Char('d') => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    let is_open = todo.is_open();
+                    if is_open {
+                        ops::mark_done(&mut app.store, &id)?;
+                    } else {
+                        ops::reopen_todo(&mut app.store, &id)?;
+                    }
                 }
             }
-        }
-        KeyCode::Char('x') => {
-            if let Some(todo) = app.selected_todo() {
-                let id = todo.id.clone();
-                let title = todo.title().to_string();
-                app.mode = Mode::ConfirmDelete { id, title };
-            }
-        }
-        KeyCode::Enter | KeyCode::Char('e') => {
-            if let Some(todo) = app.selected_todo() {
-                let id = todo.id.clone();
-                // Suspend TUI for editor
-                crossterm::terminal::disable_raw_mode()?;
-                let viewport = terminal.get_frame().area();
-                crossterm::execute!(
-                    std::io::stdout(),
-                    crossterm::cursor::MoveTo(0, viewport.y + viewport.height),
-                    crossterm::cursor::Show,
-                )?;
-
-                let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
-
-                // Resume TUI. Check edit_result before resume errors so
-                // a more actionable editor error isn't swallowed.
-                let resume = crossterm::terminal::enable_raw_mode();
-                if resume.is_ok() {
-                    let _ = terminal.clear();
+            KeyCode::Char('x') => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    let title = todo.title().to_string();
+                    app.mode = Mode::ConfirmDelete { id, title };
                 }
-                edit_result?;
-                resume?;
             }
+            KeyCode::Char('a') => {
+                app.show_all = !app.show_all;
+                app.reload();
+            }
+            _ => {}
         }
-        KeyCode::Char('n') => {
-            app.mode = Mode::NewTodo {
-                input: String::new(),
-            };
-        }
-        KeyCode::Char('a') => {
-            app.show_all = !app.show_all;
-            app.reload();
-        }
-        _ => {}
+        return Ok(ControlFlow::Continue(()));
     }
-    Ok(ControlFlow::Continue(()))
-}
 
-fn handle_new_todo(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>> {
-    if let Mode::NewTodo { ref mut input } = app.mode {
+    // Non-ctrl keys: behavior depends on cursor position
+    if app.on_input() {
+        // Cursor is on the input field (index 0)
         match key.code {
             KeyCode::Enter => {
-                if !input.is_empty() {
-                    ops::create_todo(&mut app.store, &input.clone())?;
+                if !app.input.is_empty() {
+                    ops::create_todo(&mut app.store, &app.input.clone())?;
+                    app.input.clear();
+                    // Move cursor to the newly created todo (index 1)
+                    app.list_state.select(Some(1));
                 }
-                app.mode = Mode::Normal;
             }
             KeyCode::Esc => {
-                app.mode = Mode::Normal;
+                if !app.input.is_empty() {
+                    app.input.clear();
+                } else {
+                    return Ok(ControlFlow::Break(()));
+                }
             }
-            KeyCode::Char(c) => input.push(c),
+            KeyCode::Char(c) => app.input.push(c),
             KeyCode::Backspace => {
-                input.pop();
+                app.input.pop();
+            }
+            KeyCode::Down => app.cursor_down(),
+            KeyCode::Up => app.cursor_up(),
+            _ => {}
+        }
+    } else {
+        // Cursor is on a todo item (index > 0)
+        match key.code {
+            KeyCode::Esc => return Ok(ControlFlow::Break(())),
+            KeyCode::Down => app.cursor_down(),
+            KeyCode::Up => app.cursor_up(),
+            KeyCode::Enter => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    // Suspend TUI for editor
+                    crossterm::terminal::disable_raw_mode()?;
+                    let viewport = terminal.get_frame().area();
+                    crossterm::execute!(
+                        std::io::stdout(),
+                        crossterm::cursor::MoveTo(0, viewport.y + viewport.height),
+                        crossterm::cursor::Show,
+                    )?;
+
+                    let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
+
+                    // Resume TUI. Check edit_result before resume errors so
+                    // a more actionable editor error isn't swallowed.
+                    let resume = crossterm::terminal::enable_raw_mode();
+                    if resume.is_ok() {
+                        let _ = terminal.clear();
+                    }
+                    edit_result?;
+                    resume?;
+                }
             }
             _ => {}
         }

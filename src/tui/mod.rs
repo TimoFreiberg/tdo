@@ -18,11 +18,11 @@ pub struct App {
     pub list_state: ListState,
     pub mode: Mode,
     pub show_all: bool,
+    pub input: String,
 }
 
 pub enum Mode {
     Normal,
-    NewTodo { input: String },
     ConfirmDelete { id: String, title: String },
 }
 
@@ -30,20 +30,30 @@ impl App {
     pub fn new(store: Store) -> Self {
         let todos: Vec<Todo> = store.list_open().into_iter().cloned().collect();
         let mut list_state = ListState::default();
-        if !todos.is_empty() {
-            list_state.select(Some(0));
-        }
+        // Index 0 is always the input field
+        list_state.select(Some(0));
         App {
             store,
             todos,
             list_state,
             mode: Mode::Normal,
             show_all: false,
+            input: String::new(),
         }
     }
 
+    /// Returns the selected todo, if the cursor is on a todo (index > 0).
+    /// Index 0 is the input field and returns None.
     pub fn selected_todo(&self) -> Option<&Todo> {
-        self.list_state.selected().and_then(|i| self.todos.get(i))
+        self.list_state
+            .selected()
+            .filter(|&i| i > 0)
+            .and_then(|i| self.todos.get(i - 1))
+    }
+
+    /// Whether the cursor is on the input field (index 0).
+    pub fn on_input(&self) -> bool {
+        self.list_state.selected() == Some(0)
     }
 
     pub fn reload(&mut self) {
@@ -52,17 +62,25 @@ impl App {
         } else {
             self.store.list_open().into_iter().cloned().collect()
         };
-        match self.todos.len() {
-            0 => self.list_state.select(None),
+        // Total items = input field + todos
+        let total = self.todos.len() + 1;
+        match total {
+            0 => unreachable!("always at least the input field"),
             n => {
-                let clamped = self.list_state.selected().map(|i| i.min(n - 1)).unwrap_or(0);
+                let clamped = self
+                    .list_state
+                    .selected()
+                    .map(|i| i.min(n - 1))
+                    .unwrap_or(0);
                 self.list_state.select(Some(clamped));
             }
         }
     }
 
     pub fn cursor_down(&mut self) {
-        if !self.todos.is_empty() {
+        // Total items = input field + todos
+        let total = self.todos.len() + 1;
+        if total > 0 {
             self.list_state.select_next();
         }
     }
@@ -73,10 +91,10 @@ impl App {
         }
     }
 
-    /// Viewport height: number of todo items + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
+    /// Viewport height: (input field + todo items) + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
     pub fn viewport_height(&self) -> u16 {
-        // 2 for top/bottom border, 1 for help line
-        let content_lines = self.todos.len().min(u16::MAX as usize) as u16;
+        // +1 for the input field row
+        let content_lines = (self.todos.len() + 1).min(u16::MAX as usize) as u16;
         content_lines.saturating_add(3).min(MAX_HEIGHT)
     }
 }

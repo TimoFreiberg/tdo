@@ -1,10 +1,13 @@
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::Line;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 use super::{App, Mode};
+
+/// Prefix shown before the input text in the first list entry.
+const INPUT_PREFIX: &str = "> ";
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -18,12 +21,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "j/k:move  e:edit  d:done/reopen  x:delete  n:new  a:all  q:quit",
+                "^D:done  ^X:delete  ^A:all  ^Q:quit",
                 chunks[1],
             );
-        }
-        Mode::NewTodo { input } => {
-            draw_input(f, "New todo: ", input, chunks[1]);
         }
         Mode::ConfirmDelete { title, .. } => {
             draw_help(
@@ -36,18 +36,29 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app
-        .todos
-        .iter()
-        .map(|todo| {
-            let label = if !todo.is_open() {
-                format!("{}  [done] {}", todo.id, todo.title())
-            } else {
-                format!("{}  {}", todo.id, todo.title())
-            };
-            ListItem::new(label)
-        })
-        .collect();
+    let on_input = app.on_input();
+
+    // Build the input field entry (always first)
+    let input_item = if app.input.is_empty() && !on_input {
+        ListItem::new(Line::from(Span::styled(
+            "  Add a new todo...",
+            Style::default().fg(Color::DarkGray),
+        )))
+    } else {
+        ListItem::new(format!("{INPUT_PREFIX}{}", app.input))
+    };
+
+    // Build todo items
+    let todo_items = app.todos.iter().map(|todo| {
+        let label = if !todo.is_open() {
+            format!("{}  [done] {}", todo.id, todo.title())
+        } else {
+            format!("{}  {}", todo.id, todo.title())
+        };
+        ListItem::new(label)
+    });
+
+    let items: Vec<ListItem> = std::iter::once(input_item).chain(todo_items).collect();
 
     let total = items.len();
     // Inner height = area minus top and bottom borders
@@ -69,16 +80,19 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         .block(block)
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
     f.render_stateful_widget(list, area, &mut app.list_state);
+
+    // Show cursor in the input field when it's selected
+    if on_input {
+        // The input row is at the top of the list inner area (after the top border)
+        // Subtract the scroll offset in case the list scrolled (unlikely for index 0)
+        let row_in_view = 0_u16.saturating_sub(offset as u16);
+        let cursor_y = area.y + 1 + row_in_view;
+        let cursor_x = area.x + 1 + INPUT_PREFIX.len() as u16 + app.input.chars().count() as u16;
+        f.set_cursor_position((cursor_x, cursor_y));
+    }
 }
 
 fn draw_help(f: &mut Frame, text: &str, area: Rect) {
     let help = Paragraph::new(text).style(Style::default().fg(Color::DarkGray));
     f.render_widget(help, area);
-}
-
-fn draw_input(f: &mut Frame, prompt: &str, input: &str, area: Rect) {
-    let text = format!("{prompt}{input}");
-    let widget = Paragraph::new(text.as_str());
-    f.render_widget(widget, area);
-    f.set_cursor_position((area.x + prompt.len() as u16 + input.chars().count() as u16, area.y));
 }
