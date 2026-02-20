@@ -62,9 +62,9 @@ impl App {
 
     /// Viewport height: number of todo items + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
     pub fn viewport_height(&self) -> u16 {
-        let content_lines = self.todos.len() as u16;
         // 2 for top/bottom border, 1 for help line
-        (content_lines + 3).min(MAX_HEIGHT)
+        let content_lines = self.todos.len().min(u16::MAX as usize) as u16;
+        content_lines.saturating_add(3).min(MAX_HEIGHT)
     }
 }
 

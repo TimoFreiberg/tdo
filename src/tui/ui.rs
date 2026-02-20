@@ -67,5 +67,5 @@ fn draw_input(f: &mut Frame, prompt: &str, input: &str, area: Rect) {
     let text = format!("{prompt}{input}");
     let widget = Paragraph::new(text.as_str());
     f.render_widget(widget, area);
-    f.set_cursor_position((area.x + prompt.len() as u16 + input.len() as u16, area.y));
+    f.set_cursor_position((area.x + prompt.len() as u16 + input.chars().count() as u16, area.y));
 }

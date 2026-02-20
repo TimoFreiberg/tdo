@@ -77,11 +77,14 @@ fn handle_normal(
 
                 let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
 
-                // Resume TUI regardless of editor result
-                crossterm::terminal::enable_raw_mode()?;
-                terminal.clear()?;
-
+                // Resume TUI. Check edit_result before resume errors so
+                // a more actionable editor error isn't swallowed.
+                let resume = crossterm::terminal::enable_raw_mode();
+                if resume.is_ok() {
+                    let _ = terminal.clear();
+                }
                 edit_result?;
+                resume?;
             }
         }
         KeyCode::Char('n') => {

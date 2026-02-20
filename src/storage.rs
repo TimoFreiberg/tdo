@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
+use std::fs::{self, File, TryLockError};
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
@@ -21,13 +21,16 @@ impl Store {
             .with_context(|| format!("failed to create todo directory: {}", dir.display()))?;
 
         let lock_path = dir.join(".lock");
-        let lock_file = File::create(&lock_path)
+        let lock_file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&lock_path)
             .with_context(|| format!("failed to create lock file: {}", lock_path.display()))?;
         lock_file.try_lock().map_err(|e| match e {
-            std::fs::TryLockError::WouldBlock => {
+            TryLockError::WouldBlock => {
                 anyhow!("another tdo process is using {}", dir.display())
             }
-            std::fs::TryLockError::Error(io_err) => {
+            TryLockError::Error(io_err) => {
                 anyhow::Error::from(io_err).context("failed to acquire lock")
             }
         })?;
@@ -68,7 +71,7 @@ impl Store {
     /// Create a new todo file, returning the assigned ID.
     pub fn create(&mut self, fm: &Frontmatter, body: Option<&str>) -> Result<String> {
         let existing_ids: HashSet<String> = self.cache.iter().map(|t| t.id.clone()).collect();
-        let id = generate_id(|candidate| existing_ids.contains(candidate));
+        let id = generate_id(|candidate| existing_ids.contains(candidate))?;
         let slug = slugify(&fm.title);
         let filename = if slug.is_empty() {
             format!("{id}.md")
@@ -94,13 +97,16 @@ impl Store {
 
     /// Overwrite an existing todo file and update the cache.
     pub fn save(&mut self, todo: &Todo) -> Result<()> {
+        let idx = self
+            .cache
+            .iter()
+            .position(|t| t.id == todo.id)
+            .ok_or_else(|| anyhow!("no todo in store with id '{}'", todo.id))?;
         let content = todo::render_file(&todo.frontmatter, todo.body.as_deref())?;
         let path = self.dir.join(&todo.filename);
         fs::write(&path, &content)
             .with_context(|| format!("failed to write: {}", path.display()))?;
-        if let Some(cached) = self.cache.iter_mut().find(|t| t.id == todo.id) {
-            *cached = todo.clone();
-        }
+        self.cache[idx] = todo.clone();
         Ok(())
     }
 
@@ -133,6 +139,9 @@ impl Store {
     }
 
     fn find_index(&self, id: &str) -> Result<usize> {
+        if id.is_empty() {
+            return Err(anyhow!("todo id must not be empty"));
+        }
         let matches: Vec<usize> = self
             .cache
             .iter()

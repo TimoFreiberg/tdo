@@ -1,15 +1,18 @@
+use anyhow::{anyhow, Result};
 use is_terminal::IsTerminal;
 use rand::RngExt;
 
 /// Generate a random 4-hex-character ID, retrying if `is_taken` returns true.
-pub fn generate_id(mut is_taken: impl FnMut(&str) -> bool) -> String {
-    loop {
+/// Gives up after 1000 attempts to avoid spinning forever if the ID space is full.
+pub fn generate_id(mut is_taken: impl FnMut(&str) -> bool) -> Result<String> {
+    for _ in 0..1000 {
         let n: u16 = rand::rng().random();
         let id = format!("{n:04x}");
         if !is_taken(&id) {
-            return id;
+            return Ok(id);
         }
     }
+    Err(anyhow!("failed to generate unique ID after 1000 attempts"))
 }
 
 /// Slugify a title into a filename-safe lowercase string.
@@ -90,7 +93,7 @@ mod tests {
 
     #[test]
     fn generate_id_format() {
-        let id = generate_id(|_| false);
+        let id = generate_id(|_| false).unwrap();
         assert_eq!(id.len(), 4);
         assert!(id.chars().all(|c| c.is_ascii_hexdigit()));
     }
@@ -101,8 +104,15 @@ mod tests {
         let id = generate_id(|_| {
             calls += 1;
             calls < 3 // reject first two attempts
-        });
+        })
+        .unwrap();
         assert_eq!(id.len(), 4);
         assert!(calls >= 3);
+    }
+
+    #[test]
+    fn generate_id_gives_up() {
+        let result = generate_id(|_| true);
+        assert!(result.is_err());
     }
 }
