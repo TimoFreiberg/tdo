@@ -80,8 +80,15 @@ impl App {
         (if self.has_create_line() { 1 } else { 0 }) + self.filtered.len()
     }
 
-    /// Recompute the filtered list based on current input.
+    /// Recompute the filtered list based on current input and reset
+    /// selection to the first match. Call this when the input text changes.
     pub fn refilter(&mut self) {
+        self.compute_filtered();
+        self.reset_selection();
+    }
+
+    /// Recompute `self.filtered` from current `todos` and `input`.
+    fn compute_filtered(&mut self) {
         if self.input.is_empty() {
             self.filtered = (0..self.todos.len()).collect();
         } else {
@@ -93,31 +100,47 @@ impl App {
                 .map(|(i, _)| i)
                 .collect();
         }
-        self.fix_selection();
     }
 
-    /// After refiltering, adjust selection to a valid position.
-    fn fix_selection(&mut self) {
+    /// Reset selection to the first match. Used when the filter changes.
+    fn reset_selection(&mut self) {
         let start = self.todo_start_index();
         if !self.filtered.is_empty() {
-            // Select first filtered todo
             self.list_state.select(Some(start));
         } else if self.has_create_line() {
-            // No matches, select create_new
             self.list_state.select(Some(0));
         } else {
-            // Empty input, no todos
             self.list_state.select(None);
         }
     }
 
+    /// Clamp selection to valid bounds without resetting it. Used after
+    /// reloading the store (e.g. after marking done or deleting) so that
+    /// arrow-key movement is preserved.
+    fn clamp_selection(&mut self) {
+        let total = self.selectable_count();
+        if total == 0 {
+            self.list_state.select(None);
+        } else if let Some(sel) = self.list_state.selected() {
+            if sel >= total {
+                self.list_state.select(Some(total - 1));
+            }
+        } else {
+            // Nothing selected but items exist — select first.
+            self.list_state.select(Some(0));
+        }
+    }
+
+    /// Re-read the store and recompute filtered list, clamping (not
+    /// resetting) the selection so arrow-key position is preserved.
     pub fn reload(&mut self) {
         self.todos = if self.show_all {
             self.store.list_all().to_vec()
         } else {
             self.store.list_open().into_iter().cloned().collect()
         };
-        self.refilter();
+        self.compute_filtered();
+        self.clamp_selection();
     }
 
     pub fn cursor_down(&mut self) {

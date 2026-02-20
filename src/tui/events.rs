@@ -110,14 +110,19 @@ fn handle_normal(
 
     // Non-ctrl keys: input field is always active for typing
     match key.code {
-        KeyCode::Char(c) => app.input.push(c),
+        KeyCode::Char(c) => {
+            app.input.push(c);
+            app.refilter();
+        }
         KeyCode::Backspace => {
             app.input.pop();
+            app.refilter();
         }
         KeyCode::Enter => {
             if app.is_on_create_new() {
                 ops::create_todo(&mut app.store, &app.input.clone())?;
                 app.input.clear();
+                app.refilter();
             } else if let Some(todo) = app.selected_todo() {
                 let id = todo.id.clone();
                 // Suspend TUI for editor
@@ -144,6 +149,7 @@ fn handle_normal(
         KeyCode::Esc => {
             if !app.input.is_empty() {
                 app.input.clear();
+                app.refilter();
             } else {
                 return Ok(ControlFlow::Break(()));
             }
