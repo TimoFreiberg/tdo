@@ -5,6 +5,7 @@ use jiff::civil::DateTime;
 
 use crate::storage::Store;
 use crate::todo::{Frontmatter, Status, Todo};
+use crate::util::stdout_is_tty;
 
 /// Create a new todo, returning the assigned ID.
 pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
@@ -106,22 +107,46 @@ pub fn edit_todo(
     }
 }
 
-/// Print todos to stdout.
+/// ANSI escape helpers — only used when stdout is a TTY.
+const DIM: &str = "\x1b[2m";
+const CYAN: &str = "\x1b[36m";
+const RESET: &str = "\x1b[0m";
+
+/// Print todos to stdout, with color when connected to a terminal.
 pub fn list_todos(store: &Store, all: bool) -> Result<()> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
+    let color = stdout_is_tty();
     if all {
         for todo in store.list_all() {
-            if !todo.is_open() {
-                writeln!(out, "{}  [done] {}", todo.id, todo.title())?;
+            if todo.is_open() {
+                write_todo(&mut out, todo, color)?;
             } else {
-                writeln!(out, "{}  {}", todo.id, todo.title())?;
+                write_done_todo(&mut out, todo, color)?;
             }
         }
     } else {
         for todo in store.list_open() {
-            writeln!(out, "{}  {}", todo.id, todo.title())?;
+            write_todo(&mut out, todo, color)?;
         }
+    }
+    Ok(())
+}
+
+fn write_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
+    if color {
+        writeln!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
+    } else {
+        writeln!(out, "{}  {}", todo.id, todo.title())?;
+    }
+    Ok(())
+}
+
+fn write_done_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
+    if color {
+        writeln!(out, "{DIM}{}  [done] {}{RESET}", todo.id, todo.title())?;
+    } else {
+        writeln!(out, "{}  [done] {}", todo.id, todo.title())?;
     }
     Ok(())
 }
