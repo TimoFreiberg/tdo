@@ -98,8 +98,8 @@ fn handle_normal(
                 if !app.input.is_empty() {
                     ops::create_todo(&mut app.store, &app.input.clone())?;
                     app.input.clear();
-                    // Move cursor to the newly created todo (index 1)
-                    app.list_state.select(Some(1));
+                    // Keep cursor on the input field for quick consecutive entry
+                    app.list_state.select(Some(0));
                 }
             }
             KeyCode::Esc => {
