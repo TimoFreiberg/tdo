@@ -14,7 +14,7 @@ pub fn run_event_loop(
     app: &mut App,
 ) -> Result<()> {
     loop {
-        terminal.draw(|f| super::ui::draw(f, app))?;
+        terminal.draw(|f| super::ui::draw(f, &mut *app))?;
         if let Event::Key(key) = event::read()? {
             if handle_key(terminal, app, key)? == ControlFlow::Break(()) {
                 return Ok(());
@@ -46,7 +46,7 @@ fn handle_normal(
         KeyCode::Char('j') | KeyCode::Down => app.cursor_down(),
         KeyCode::Char('k') | KeyCode::Up => app.cursor_up(),
         KeyCode::Char('d') => {
-            if let Some(todo) = app.todos.get(app.cursor) {
+            if let Some(todo) = app.selected_todo() {
                 let id = todo.id.clone();
                 let is_open = todo.is_open();
                 if is_open {
@@ -57,14 +57,14 @@ fn handle_normal(
             }
         }
         KeyCode::Char('x') => {
-            if let Some(todo) = app.todos.get(app.cursor) {
+            if let Some(todo) = app.selected_todo() {
                 let id = todo.id.clone();
                 let title = todo.title().to_string();
                 app.mode = Mode::ConfirmDelete { id, title };
             }
         }
         KeyCode::Enter | KeyCode::Char('e') => {
-            if let Some(todo) = app.todos.get(app.cursor) {
+            if let Some(todo) = app.selected_todo() {
                 let id = todo.id.clone();
                 // Suspend TUI for editor
                 crossterm::terminal::disable_raw_mode()?;

@@ -1,11 +1,12 @@
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 use super::{App, Mode};
 
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Length(1)])
@@ -34,28 +35,40 @@ pub fn draw(f: &mut Frame, app: &App) {
     }
 }
 
-fn draw_list(f: &mut Frame, app: &App, area: Rect) {
+fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
     let items: Vec<ListItem> = app
         .todos
         .iter()
-        .enumerate()
-        .map(|(i, todo)| {
-            let style = if i == app.cursor {
-                Style::default().add_modifier(Modifier::REVERSED)
-            } else {
-                Style::default()
-            };
+        .map(|todo| {
             let label = if !todo.is_open() {
                 format!("{}  [done] {}", todo.id, todo.title())
             } else {
                 format!("{}  {}", todo.id, todo.title())
             };
-            ListItem::new(label).style(style)
+            ListItem::new(label)
         })
         .collect();
 
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(" tdo "));
-    f.render_widget(list, area);
+    let total = items.len();
+    // Inner height = area minus top and bottom borders
+    let visible = area.height.saturating_sub(2) as usize;
+    let offset = app.list_state.offset();
+
+    let has_items_above = offset > 0;
+    let has_items_below = total > offset + visible;
+
+    let mut block = Block::default().borders(Borders::ALL).title(" tdo ");
+    if has_items_above {
+        block = block.title_top(Line::from(" \u{25b2} ").alignment(Alignment::Right));
+    }
+    if has_items_below {
+        block = block.title_bottom(Line::from(" \u{25bc} ").alignment(Alignment::Right));
+    }
+
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+    f.render_stateful_widget(list, area, &mut app.list_state);
 }
 
 fn draw_help(f: &mut Frame, text: &str, area: Rect) {
