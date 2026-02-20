@@ -1,9 +1,5 @@
 # TODO
 
-## TUI: When TUI grows, the last line has a strikethrough left
-
-That line needs to be redrawn somehow
-
 ## TUI: empty state message (#5)
 
 When there are zero open todos, the TUI shows an empty bordered box. Add an
