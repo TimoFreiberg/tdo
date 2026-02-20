@@ -3,7 +3,6 @@ use std::ops::ControlFlow;
 
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
@@ -42,7 +41,7 @@ fn handle_normal(
     key: KeyEvent,
 ) -> Result<ControlFlow<()>> {
     match key.code {
-        KeyCode::Char('q') => return Ok(ControlFlow::Break(())),
+        KeyCode::Char('q') | KeyCode::Esc => return Ok(ControlFlow::Break(())),
         KeyCode::Char('j') | KeyCode::Down => app.cursor_down(),
         KeyCode::Char('k') | KeyCode::Up => app.cursor_up(),
         KeyCode::Char('d') => {
@@ -51,17 +50,23 @@ fn handle_normal(
                 ops::mark_done(&app.store, &id)?;
             }
         }
-        KeyCode::Enter => {
+        KeyCode::Enter | KeyCode::Char('e') => {
             if let Some(todo) = app.selected() {
                 let id = todo.id.clone();
-                // Suspend TUI, spawn editor, resume TUI
+                // Suspend TUI for editor
                 crossterm::terminal::disable_raw_mode()?;
-                crossterm::execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                // Move cursor below viewport so editor starts on a clean line
+                let viewport = terminal.get_frame().area();
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::cursor::MoveTo(0, viewport.y + viewport.height),
+                    crossterm::cursor::Show,
+                )?;
 
                 ops::edit_todo(&app.store, &id, None, None, true)?;
 
+                // Resume TUI
                 crossterm::terminal::enable_raw_mode()?;
-                crossterm::execute!(terminal.backend_mut(), EnterAlternateScreen)?;
                 terminal.clear()?;
             }
         }

@@ -1,6 +1,6 @@
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 use super::{App, Mode};
@@ -11,11 +11,19 @@ pub fn draw(f: &mut Frame, app: &App) {
         .constraints([Constraint::Min(1), Constraint::Length(1)])
         .split(f.area());
 
-    draw_list(f, app, chunks[0]);
-    draw_help(f, &app.mode, chunks[1]);
-
-    if let Mode::NewTodo { input } = &app.mode {
-        draw_new_todo_popup(f, input);
+    match &app.mode {
+        Mode::Normal => {
+            draw_list(f, app, chunks[0]);
+            draw_help(
+                f,
+                "j/k: navigate  e/Enter: edit  d: done  n: new  q/Esc: quit",
+                chunks[1],
+            );
+        }
+        Mode::NewTodo { input } => {
+            draw_list(f, app, chunks[0]);
+            draw_input(f, "New todo: ", input, chunks[1]);
+        }
     }
 }
 
@@ -38,44 +46,14 @@ fn draw_list(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(list, area);
 }
 
-fn draw_help(f: &mut Frame, mode: &Mode, area: Rect) {
-    let text = match mode {
-        Mode::Normal => "j/k: navigate  Enter: edit  d: done  n: new  q: quit",
-        Mode::NewTodo { .. } => "Enter: create  Esc: cancel",
-    };
+fn draw_help(f: &mut Frame, text: &str, area: Rect) {
     let help = Paragraph::new(text).style(Style::default().fg(Color::DarkGray));
     f.render_widget(help, area);
 }
 
-fn draw_new_todo_popup(f: &mut Frame, input: &str) {
-    let area = centered_rect(60, 3, f.area());
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" New todo ");
-    let inner = block.inner(area);
-    f.render_widget(Clear, area);
-    f.render_widget(block, area);
-    let input_widget = Paragraph::new(input);
-    f.render_widget(input_widget, inner);
-    f.set_cursor_position((inner.x + input.len() as u16, inner.y));
-}
-
-fn centered_rect(percent_x: u16, height: u16, area: Rect) -> Rect {
-    let vertical = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - 20) / 2),
-            Constraint::Length(height),
-            Constraint::Percentage((100 - 20) / 2),
-        ])
-        .split(area);
-    let horizontal = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(vertical[1]);
-    horizontal[1]
+fn draw_input(f: &mut Frame, prompt: &str, input: &str, area: Rect) {
+    let text = format!("{prompt}{input}");
+    let widget = Paragraph::new(text.as_str());
+    f.render_widget(widget, area);
+    f.set_cursor_position((area.x + prompt.len() as u16 + input.len() as u16, area.y));
 }
