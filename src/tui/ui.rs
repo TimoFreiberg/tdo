@@ -6,7 +6,7 @@ use ratatui::Frame;
 
 use super::{App, Mode};
 
-/// Prefix shown before the input text in the first list entry.
+/// Prefix shown before the input text in the search field.
 const INPUT_PREFIX: &str = "> ";
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -21,7 +21,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "Enter:edit  d:done  x:delete  ^A:all  ^Q:quit",
+                "Enter:select  ^D:done  ^X:delete  ^A:all  ^Q:quit",
                 chunks[1],
             );
         }
@@ -36,37 +36,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
-    let on_input = app.on_input();
+    // Build selectable items for scroll indicator calculation
+    let selectable = app.selectable_count();
+    let list_offset = app.list_state.offset();
+    // Inner height available for the items list (area minus 2 borders minus 1 input row)
+    let list_visible = area.height.saturating_sub(3) as usize;
 
-    // Build the input field entry (always first)
-    let input_item = if app.input.is_empty() && !on_input {
-        ListItem::new(Line::from(Span::styled(
-            "  Add a new todo...",
-            Style::default().fg(Color::DarkGray),
-        )))
-    } else {
-        ListItem::new(format!("{INPUT_PREFIX}{}", app.input))
-    };
-
-    // Build todo items
-    let todo_items = app.todos.iter().map(|todo| {
-        let label = if !todo.is_open() {
-            format!("{}  [done] {}", todo.id, todo.title())
-        } else {
-            format!("{}  {}", todo.id, todo.title())
-        };
-        ListItem::new(label)
-    });
-
-    let items: Vec<ListItem> = std::iter::once(input_item).chain(todo_items).collect();
-
-    let total = items.len();
-    // Inner height = area minus top and bottom borders
-    let visible = area.height.saturating_sub(2) as usize;
-    let offset = app.list_state.offset();
-
-    let has_items_above = offset > 0;
-    let has_items_below = total > offset + visible;
+    let has_items_above = list_offset > 0;
+    let has_items_below = selectable > list_offset + list_visible;
 
     let mut block = Block::default().borders(Borders::ALL).title(" tdo ");
     if has_items_above {
@@ -76,20 +53,61 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         block = block.title_bottom(Line::from(" \u{25bc} ").alignment(Alignment::Right));
     }
 
-    let list = List::new(items)
-        .block(block)
-        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
-    f.render_stateful_widget(list, area, &mut app.list_state);
+    let inner = block.inner(area);
+    f.render_widget(block, area);
 
-    // Show cursor in the input field when it's selected
-    if on_input {
-        // The input row is at the top of the list inner area (after the top border)
-        // Subtract the scroll offset in case the list scrolled (unlikely for index 0)
-        let row_in_view = 0_u16.saturating_sub(offset as u16);
-        let cursor_y = area.y + 1 + row_in_view;
-        let cursor_x = area.x + 1 + INPUT_PREFIX.len() as u16 + app.input.chars().count() as u16;
-        f.set_cursor_position((cursor_x, cursor_y));
+    if inner.height == 0 {
+        return;
     }
+
+    // Split inner area: input row (fixed) + items list (scrollable)
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(1), Constraint::Min(0)])
+        .split(inner);
+
+    // Render the search/input field (always visible at top)
+    let input_line = if app.input.is_empty() {
+        Line::from(vec![
+            Span::raw(INPUT_PREFIX),
+            Span::styled(
+                "Search or create...",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ])
+    } else {
+        Line::from(format!("{INPUT_PREFIX}{}", app.input))
+    };
+    f.render_widget(Paragraph::new(input_line), chunks[0]);
+
+    // Build selectable items
+    let mut items: Vec<ListItem> = Vec::new();
+
+    if app.has_create_line() {
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled("+ ", Style::default().fg(Color::Green)),
+            Span::raw(format!("Create \"{}\"", app.input)),
+        ])));
+    }
+
+    for &idx in &app.filtered {
+        let todo = &app.todos[idx];
+        let label = if !todo.is_open() {
+            format!("{}  [done] {}", todo.id, todo.title())
+        } else {
+            format!("{}  {}", todo.id, todo.title())
+        };
+        items.push(ListItem::new(label));
+    }
+
+    let list = List::new(items)
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+    f.render_stateful_widget(list, chunks[1], &mut app.list_state);
+
+    // Always show cursor in the input field
+    let cursor_x = chunks[0].x + INPUT_PREFIX.len() as u16 + app.input.chars().count() as u16;
+    let cursor_y = chunks[0].y;
+    f.set_cursor_position((cursor_x, cursor_y));
 }
 
 fn draw_help(f: &mut Frame, text: &str, area: Rect) {

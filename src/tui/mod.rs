@@ -15,6 +15,9 @@ const MAX_HEIGHT: u16 = 20;
 pub struct App {
     pub store: Store,
     pub todos: Vec<Todo>,
+    /// Indices into `todos` that match the current fuzzy query.
+    pub filtered: Vec<usize>,
+    /// Selection state for the items below the input field.
     pub list_state: ListState,
     pub mode: Mode,
     pub show_all: bool,
@@ -29,12 +32,15 @@ pub enum Mode {
 impl App {
     pub fn new(store: Store) -> Self {
         let todos: Vec<Todo> = store.list_open().into_iter().cloned().collect();
+        let filtered: Vec<usize> = (0..todos.len()).collect();
         let mut list_state = ListState::default();
-        // Index 0 is always the input field
-        list_state.select(Some(0));
+        if !filtered.is_empty() {
+            list_state.select(Some(0));
+        }
         App {
             store,
             todos,
+            filtered,
             list_state,
             mode: Mode::Normal,
             show_all: false,
@@ -42,18 +48,67 @@ impl App {
         }
     }
 
-    /// Returns the selected todo, if the cursor is on a todo (index > 0).
-    /// Index 0 is the input field and returns None.
-    pub fn selected_todo(&self) -> Option<&Todo> {
-        self.list_state
-            .selected()
-            .filter(|&i| i > 0)
-            .and_then(|i| self.todos.get(i - 1))
+    /// Whether the "Create new" line is shown (input is non-empty).
+    pub fn has_create_line(&self) -> bool {
+        !self.input.is_empty()
     }
 
-    /// Whether the cursor is on the input field (index 0).
-    pub fn on_input(&self) -> bool {
-        self.list_state.selected() == Some(0)
+    /// The index in the selectable list where filtered todos start.
+    fn todo_start_index(&self) -> usize {
+        if self.has_create_line() { 1 } else { 0 }
+    }
+
+    /// Returns the selected todo, if the selection is on a filtered todo item.
+    pub fn selected_todo(&self) -> Option<&Todo> {
+        let sel = self.list_state.selected()?;
+        let start = self.todo_start_index();
+        if sel >= start {
+            let filtered_idx = sel - start;
+            self.filtered.get(filtered_idx).and_then(|&i| self.todos.get(i))
+        } else {
+            None
+        }
+    }
+
+    /// Whether the selection is on the "Create new" line.
+    pub fn is_on_create_new(&self) -> bool {
+        self.has_create_line() && self.list_state.selected() == Some(0)
+    }
+
+    /// Number of selectable items (create_new + filtered todos).
+    pub fn selectable_count(&self) -> usize {
+        (if self.has_create_line() { 1 } else { 0 }) + self.filtered.len()
+    }
+
+    /// Recompute the filtered list based on current input.
+    pub fn refilter(&mut self) {
+        if self.input.is_empty() {
+            self.filtered = (0..self.todos.len()).collect();
+        } else {
+            self.filtered = self
+                .todos
+                .iter()
+                .enumerate()
+                .filter(|(_, t)| fuzzy_match(&self.input, t.title()))
+                .map(|(i, _)| i)
+                .collect();
+        }
+        self.fix_selection();
+    }
+
+    /// After refiltering, adjust selection to a valid position.
+    fn fix_selection(&mut self) {
+        let start = self.todo_start_index();
+        if !self.filtered.is_empty() {
+            // Select first filtered todo
+            self.list_state.select(Some(start));
+        } else if self.has_create_line() {
+            // No matches, select create_new
+            self.list_state.select(Some(0));
+        } else {
+            // Empty input, no todos
+            self.list_state.select(None);
+        }
     }
 
     pub fn reload(&mut self) {
@@ -62,41 +117,46 @@ impl App {
         } else {
             self.store.list_open().into_iter().cloned().collect()
         };
-        // Total items = input field + todos
-        let total = self.todos.len() + 1;
-        match total {
-            0 => unreachable!("always at least the input field"),
-            n => {
-                let clamped = self
-                    .list_state
-                    .selected()
-                    .map(|i| i.min(n - 1))
-                    .unwrap_or(0);
-                self.list_state.select(Some(clamped));
+        self.refilter();
+    }
+
+    pub fn cursor_down(&mut self) {
+        let total = self.selectable_count();
+        if let Some(sel) = self.list_state.selected() {
+            if sel + 1 < total {
+                self.list_state.select(Some(sel + 1));
             }
         }
     }
 
-    pub fn cursor_down(&mut self) {
-        // Total items = input field + todos
-        let total = self.todos.len() + 1;
-        if total > 0 {
-            self.list_state.select_next();
-        }
-    }
-
     pub fn cursor_up(&mut self) {
-        if self.list_state.selected().is_some() {
-            self.list_state.select_previous();
+        if let Some(sel) = self.list_state.selected() {
+            if sel > 0 {
+                self.list_state.select(Some(sel - 1));
+            }
         }
     }
 
-    /// Viewport height: (input field + todo items) + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
+    /// Viewport height: (input + items) + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
     pub fn viewport_height(&self) -> u16 {
-        // +1 for the input field row
-        let content_lines = (self.todos.len() + 1).min(u16::MAX as usize) as u16;
+        let content_lines = (1 + self.selectable_count()).min(u16::MAX as usize) as u16;
         content_lines.saturating_add(3).min(MAX_HEIGHT)
     }
+}
+
+/// Fuzzy subsequence match (case-insensitive).
+fn fuzzy_match(query: &str, text: &str) -> bool {
+    let mut text_chars = text.chars().flat_map(|c| c.to_lowercase());
+    for qc in query.chars().flat_map(|c| c.to_lowercase()) {
+        loop {
+            match text_chars.next() {
+                Some(tc) if tc == qc => break,
+                Some(_) => continue,
+                None => return false,
+            }
+        }
+    }
+    true
 }
 
 /// RAII guard that disables raw mode on drop.
@@ -142,5 +202,33 @@ pub fn run_tui(store: Store) -> Result<()> {
             Ok(())
         }
         Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fuzzy_match_basic() {
+        assert!(fuzzy_match("fb", "foobar"));
+        assert!(fuzzy_match("FB", "foobar"));
+        assert!(fuzzy_match("fb", "FooBar"));
+    }
+
+    #[test]
+    fn fuzzy_match_exact() {
+        assert!(fuzzy_match("foo", "foo"));
+    }
+
+    #[test]
+    fn fuzzy_match_empty_query() {
+        assert!(fuzzy_match("", "anything"));
+    }
+
+    #[test]
+    fn fuzzy_match_no_match() {
+        assert!(!fuzzy_match("xyz", "foobar"));
+        assert!(!fuzzy_match("ba", "abc"));
     }
 }

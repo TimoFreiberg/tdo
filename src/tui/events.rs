@@ -77,52 +77,10 @@ fn handle_normal(
 ) -> Result<ControlFlow<()>> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
-    // Ctrl+key shortcuts (work regardless of cursor position)
+    // Ctrl+key shortcuts (always active)
     if ctrl {
         match key.code {
             KeyCode::Char('q') | KeyCode::Char('c') => return Ok(ControlFlow::Break(())),
-            KeyCode::Char('a') => {
-                app.show_all = !app.show_all;
-                app.reload();
-            }
-            _ => {}
-        }
-        return Ok(ControlFlow::Continue(()));
-    }
-
-    // Non-ctrl keys: behavior depends on cursor position
-    if app.on_input() {
-        // Cursor is on the input field (index 0)
-        match key.code {
-            KeyCode::Enter => {
-                if !app.input.is_empty() {
-                    ops::create_todo(&mut app.store, &app.input.clone())?;
-                    app.input.clear();
-                    // Keep cursor on the input field for quick consecutive entry
-                    app.list_state.select(Some(0));
-                }
-            }
-            KeyCode::Esc => {
-                if !app.input.is_empty() {
-                    app.input.clear();
-                } else {
-                    return Ok(ControlFlow::Break(()));
-                }
-            }
-            KeyCode::Char(c) => app.input.push(c),
-            KeyCode::Backspace => {
-                app.input.pop();
-            }
-            KeyCode::Down => app.cursor_down(),
-            KeyCode::Up => app.cursor_up(),
-            _ => {}
-        }
-    } else {
-        // Cursor is on a todo item (index > 0)
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => return Ok(ControlFlow::Break(())),
-            KeyCode::Down => app.cursor_down(),
-            KeyCode::Up => app.cursor_up(),
             KeyCode::Char('a') => {
                 app.show_all = !app.show_all;
                 app.reload();
@@ -145,32 +103,54 @@ fn handle_normal(
                     app.mode = Mode::ConfirmDelete { id, title };
                 }
             }
-            KeyCode::Enter => {
-                if let Some(todo) = app.selected_todo() {
-                    let id = todo.id.clone();
-                    // Suspend TUI for editor
-                    crossterm::terminal::disable_raw_mode()?;
-                    let viewport = terminal.get_frame().area();
-                    crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::cursor::MoveTo(0, viewport.y + viewport.height),
-                        crossterm::cursor::Show,
-                    )?;
-
-                    let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
-
-                    // Resume TUI. Check edit_result before resume errors so
-                    // a more actionable editor error isn't swallowed.
-                    let resume = crossterm::terminal::enable_raw_mode();
-                    if resume.is_ok() {
-                        let _ = terminal.clear();
-                    }
-                    edit_result?;
-                    resume?;
-                }
-            }
             _ => {}
         }
+        return Ok(ControlFlow::Continue(()));
+    }
+
+    // Non-ctrl keys: input field is always active for typing
+    match key.code {
+        KeyCode::Char(c) => app.input.push(c),
+        KeyCode::Backspace => {
+            app.input.pop();
+        }
+        KeyCode::Enter => {
+            if app.is_on_create_new() {
+                ops::create_todo(&mut app.store, &app.input.clone())?;
+                app.input.clear();
+            } else if let Some(todo) = app.selected_todo() {
+                let id = todo.id.clone();
+                // Suspend TUI for editor
+                crossterm::terminal::disable_raw_mode()?;
+                let viewport = terminal.get_frame().area();
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::cursor::MoveTo(0, viewport.y + viewport.height),
+                    crossterm::cursor::Show,
+                )?;
+
+                let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
+
+                // Resume TUI. Check edit_result before resume errors so
+                // a more actionable editor error isn't swallowed.
+                let resume = crossterm::terminal::enable_raw_mode();
+                if resume.is_ok() {
+                    let _ = terminal.clear();
+                }
+                edit_result?;
+                resume?;
+            }
+        }
+        KeyCode::Esc => {
+            if !app.input.is_empty() {
+                app.input.clear();
+            } else {
+                return Ok(ControlFlow::Break(()));
+            }
+        }
+        KeyCode::Down => app.cursor_down(),
+        KeyCode::Up => app.cursor_up(),
+        _ => {}
     }
     Ok(ControlFlow::Continue(()))
 }
