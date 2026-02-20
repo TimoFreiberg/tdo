@@ -17,7 +17,6 @@ tdo --list --all             # List all todos including done
 ### Flags
 
 ```
---json                       # Machine-readable JSON output
 --dir <path>                 # Override .todo/ directory location
 ```
 

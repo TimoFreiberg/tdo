@@ -4,8 +4,8 @@
 
 `tdo` is a local todo manager that stores items as markdown files with YAML
 frontmatter in a `.todo/` directory. It has two interfaces: a TUI for
-interactive terminal use, and a CLI with `--json` output for automation
-(e.g. driving from Claude Code).
+interactive terminal use, and a plain-text CLI for automation (e.g. driving
+from Claude Code).
 
 ## Storage
 
@@ -43,15 +43,15 @@ Optional body content added via editor.
 ### Modes
 
 - **No args, interactive terminal** (`isatty(stdout)`) → launch TUI
-- **No args, non-interactive** → print open todos (plain text, or JSON with `--json`)
+- **No args, non-interactive** → print open todos as plain text
 - **With args** → CLI operation (create, edit, done, delete, list)
 
 ### Operations
 
 | Command | Description |
 |---|---|
-| `tdo <text>` | Create a new todo with the given title |
-| `tdo --edit <id>` | Open the todo file in `$EDITOR` (fallback: `vim`) |
+| `tdo <text>` | Create a new todo with the given title. Prints the new ID to stdout |
+| `tdo --edit <id>` | Open the todo file in `$EDITOR` (fallback: `vim`). Must also support non-interactive editing (e.g. `--edit <id> --title <text>` or accepting new content on stdin) so Claude Code can rewrite todos without spawning an editor |
 | `tdo --done <id>` | Mark a todo as done |
 | `tdo --delete <id>` | Delete a todo file (confirms if interactive) |
 | `tdo --list` | List open todos |
@@ -61,7 +61,6 @@ Optional body content added via editor.
 
 | Flag | Description |
 |---|---|
-| `--json` | Machine-readable JSON output |
 | `--dir <path>` | Override the `.todo/` directory location |
 
 ## TUI
