@@ -12,6 +12,11 @@ use crate::todo::Todo;
 
 const MAX_HEIGHT: u16 = 20;
 
+/// Returns the number of rows in the terminal, or `MAX_HEIGHT` if the query fails.
+fn terminal_rows() -> u16 {
+    terminal::size().map(|(_, rows)| rows).unwrap_or(MAX_HEIGHT)
+}
+
 pub struct App {
     pub store: Store,
     pub todos: Vec<Todo>,
@@ -160,10 +165,12 @@ impl App {
         }
     }
 
-    /// Viewport height: (input + items) + 2 (border) + 1 (help line), capped at MAX_HEIGHT.
+    /// Viewport height: (input + items) + 2 (border) + 1 (help line), capped at
+    /// `MAX_HEIGHT` and the terminal height minus one row of margin.
     pub fn viewport_height(&self) -> u16 {
         let content_lines = (1 + self.selectable_count()).min(u16::MAX as usize) as u16;
-        content_lines.saturating_add(3).min(MAX_HEIGHT)
+        let cap = MAX_HEIGHT.min(terminal_rows().saturating_sub(1));
+        content_lines.saturating_add(3).min(cap)
     }
 }
 

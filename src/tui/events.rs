@@ -16,21 +16,25 @@ pub fn run_event_loop(
     let mut current_height = app.viewport_height();
     loop {
         terminal.draw(|f| super::ui::draw(f, &mut *app))?;
-        if let Event::Key(key) = event::read()? {
-            if handle_key(&mut terminal, app, key)? == ControlFlow::Break(()) {
-                return Ok(terminal);
+        match event::read()? {
+            Event::Key(key) => {
+                if handle_key(&mut terminal, app, key)? == ControlFlow::Break(()) {
+                    return Ok(terminal);
+                }
+                app.reload();
             }
-            app.reload();
-            let new_height = app.viewport_height();
-            if new_height > current_height {
-                terminal = grow_viewport(terminal, new_height)?;
-                current_height = new_height;
-            }
+            Event::Resize(_, _) => {}
+            _ => continue,
+        }
+        let new_height = app.viewport_height();
+        if new_height != current_height {
+            terminal = resize_viewport(terminal, new_height)?;
+            current_height = new_height;
         }
     }
 }
 
-fn grow_viewport(
+fn resize_viewport(
     mut terminal: Terminal<CrosstermBackend<Stdout>>,
     new_height: u16,
 ) -> Result<Terminal<CrosstermBackend<Stdout>>> {
@@ -139,11 +143,31 @@ fn handle_normal(
                 // Resume TUI. Check edit_result before resume errors so
                 // a more actionable editor error isn't swallowed.
                 let resume = crossterm::terminal::enable_raw_mode();
-                if resume.is_ok() {
-                    let _ = terminal.clear();
-                }
                 edit_result?;
                 resume?;
+
+                // Recreate the terminal so it picks up the (possibly
+                // changed) terminal size and redraws cleanly.
+                let area = terminal.get_frame().area();
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::cursor::MoveTo(0, area.y),
+                )?;
+                let new_height = app.viewport_height();
+                let backend = CrosstermBackend::new(std::io::stdout());
+                let mut new_terminal = Terminal::with_options(
+                    backend,
+                    TerminalOptions {
+                        viewport: Viewport::Inline(new_height),
+                    },
+                )?;
+                let new_area = new_terminal.get_frame().area();
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::cursor::MoveTo(new_area.x, new_area.y),
+                    crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
+                )?;
+                *terminal = new_terminal;
             }
         }
         KeyCode::Esc => {
