@@ -1,5 +1,5 @@
 macos_target := "aarch64-apple-darwin"
-linux_target := "x86_64-unknown-linux-gnu"
+linux_target := "x86_64-unknown-linux-musl"
 dist := "dist"
 
 # Build all targets
@@ -11,9 +11,9 @@ build-macos:
     mkdir -p {{dist}}
     cp target/{{macos_target}}/release/tdo {{dist}}/tdo-macos-arm64
 
-# Build for Linux x86_64 (requires cross: cargo install cross)
+# Build for Linux x86_64 (uses rust-lld, no cross/Docker needed)
 build-linux:
-    cross build --release --target {{linux_target}}
+    cargo build --release --target {{linux_target}}
     mkdir -p {{dist}}
     cp target/{{linux_target}}/release/tdo {{dist}}/tdo-linux-x86_64
 
