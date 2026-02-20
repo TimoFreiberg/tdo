@@ -1,7 +1,8 @@
 # TODO
 
-## TUI: Grow TUI space when items are added
-When the list is initialized with space for 2 TODOs and i add a third, the list should grow to show all 3
+## TUI: When TUI grows, the last line has a strikethrough left
+
+That line needs to be redrawn somehow
 
 ## TUI: empty state message (#5)
 
