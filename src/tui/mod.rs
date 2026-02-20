@@ -11,15 +11,6 @@ use crate::todo::Todo;
 
 const MAX_HEIGHT: u16 = 20;
 
-/// RAII guard to ensure raw mode is disabled on exit.
-struct RawModeGuard;
-
-impl Drop for RawModeGuard {
-    fn drop(&mut self) {
-        let _ = terminal::disable_raw_mode();
-    }
-}
-
 pub struct App {
     pub store: Store,
     pub todos: Vec<Todo>,
@@ -35,32 +26,26 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(store: Store) -> Result<Self> {
-        let mut app = App {
+    pub fn new(store: Store) -> Self {
+        let todos: Vec<Todo> = store.list_open().into_iter().cloned().collect();
+        App {
             store,
-            todos: Vec::new(),
+            todos,
             cursor: 0,
             mode: Mode::Normal,
             show_all: false,
-        };
-        app.reload()?;
-        Ok(app)
+        }
     }
 
-    pub fn reload(&mut self) -> Result<()> {
+    pub fn reload(&mut self) {
         self.todos = if self.show_all {
-            self.store.list_all()?
+            self.store.list_all().to_vec()
         } else {
-            self.store.list_open()?
+            self.store.list_open().into_iter().cloned().collect()
         };
         if self.cursor >= self.todos.len() && !self.todos.is_empty() {
             self.cursor = self.todos.len() - 1;
         }
-        Ok(())
-    }
-
-    pub fn selected(&self) -> Option<&Todo> {
-        self.todos.get(self.cursor)
     }
 
     pub fn cursor_down(&mut self) {
@@ -83,14 +68,23 @@ impl App {
     }
 }
 
+/// RAII guard that disables raw mode on drop.
+struct RawModeGuard;
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        let _ = terminal::disable_raw_mode();
+    }
+}
+
 pub fn run_tui(store: Store) -> Result<()> {
     terminal::enable_raw_mode()?;
-    let guard = RawModeGuard;
+    let _raw_guard = RawModeGuard;
 
     let stdout = std::io::stdout();
     let backend = CrosstermBackend::new(stdout);
 
-    let mut app = App::new(store)?;
+    let app = App::new(store);
     let height = app.viewport_height();
 
     let mut terminal = Terminal::with_options(
@@ -100,18 +94,17 @@ pub fn run_tui(store: Store) -> Result<()> {
         },
     )?;
 
+    let mut app = app;
     let result = events::run_event_loop(&mut terminal, &mut app);
 
-    // Disable raw mode (guard ensures this even on early returns above)
-    drop(guard);
-
-    // Move cursor below the inline viewport so the last frame stays in scrollback
+    // Disable explicitly so cursor positioning works in cooked mode.
+    // The guard will no-op on drop since raw mode is already off.
+    terminal::disable_raw_mode()?;
     let viewport = terminal.get_frame().area();
-    let _ = crossterm::execute!(
+    crossterm::execute!(
         std::io::stdout(),
         crossterm::cursor::MoveTo(0, viewport.y + viewport.height)
-    );
+    )?;
     println!();
-
     result
 }

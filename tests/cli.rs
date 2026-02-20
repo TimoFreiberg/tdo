@@ -71,26 +71,44 @@ fn done_marks_status() {
 }
 
 #[test]
-fn delete_removes_file() {
+fn reopen_marks_status() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["delete me"]);
-    assert_eq!(t.files().len(), 1);
+    let id = t.run_ok(&["do the thing"]);
+    t.run_ok(&["--done", &id]);
 
-    // Non-interactive delete requires --force
-    t.run_ok(&["--delete", &id, "--force"]);
-    assert_eq!(t.files().len(), 0);
+    // Verify it's done
+    let files = t.files();
+    let path = t.dir.path().join(&files[0]);
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("status: done"));
+
+    // Reopen it
+    t.run_ok(&["--reopen", &id]);
+
+    let content = std::fs::read_to_string(&path).unwrap();
+    assert!(content.contains("status: open"));
 }
 
 #[test]
-fn delete_without_force_fails_non_interactive() {
+fn delete_requires_force_non_interactive() {
     let t = TdoTest::new();
     let id = t.run_ok(&["delete me"]);
-
-    let err = t.run_err(&["--delete", &id]);
-    assert!(err.contains("--force"), "expected --force hint, got: {err}");
-
-    // File should still exist
     assert_eq!(t.files().len(), 1);
+
+    // Without --force, non-interactive delete should fail
+    let err = t.run_err(&["--delete", &id]);
+    assert!(err.contains("--force"), "should mention --force: {err}");
+    assert_eq!(t.files().len(), 1, "file should not be deleted");
+}
+
+#[test]
+fn delete_force_removes_file() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["delete me"]);
+    assert_eq!(t.files().len(), 1);
+
+    t.run_ok(&["--delete", &id, "--force"]);
+    assert_eq!(t.files().len(), 0);
 }
 
 #[test]
@@ -118,15 +136,15 @@ fn edit_non_interactive_body() {
 }
 
 #[test]
-fn edit_non_interactive_no_flags_fails() {
+fn edit_no_flags_non_interactive_fails() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["edit me"]);
+    let id = t.run_ok(&["some task"]);
 
-    // Non-interactive edit with no --title/--body should fail
+    // Non-interactive edit with no title/body should fail
     let err = t.run_err(&["--edit", &id]);
     assert!(
-        err.contains("--title") || err.contains("--body"),
-        "expected hint about --title/--body, got: {err}"
+        err.contains("non-interactively"),
+        "should explain the error: {err}"
     );
 }
 
@@ -159,34 +177,18 @@ fn multiple_creates_unique_ids() {
 }
 
 #[test]
-fn reopen_marks_status() {
-    let t = TdoTest::new();
-    let id = t.run_ok(&["reopen me"]);
-    t.run_ok(&["--done", &id]);
-
-    // Verify it's done
-    let files = t.files();
-    let path = t.dir.path().join(&files[0]);
-    let content = std::fs::read_to_string(&path).unwrap();
-    assert!(content.contains("status: done"));
-
-    // Reopen it
-    t.run_ok(&["--reopen", &id]);
-    let content = std::fs::read_to_string(&path).unwrap();
-    assert!(content.contains("status: open"));
-}
-
-#[test]
-fn prefix_matching() {
+fn prefix_id_match() {
     let t = TdoTest::new();
     let id = t.run_ok(&["prefix test"]);
-
-    // Use first 2 chars as prefix
+    // Use a 2-char prefix (should be unique with one todo)
     let prefix = &id[..2];
+
     t.run_ok(&["--done", prefix]);
 
-    let list = t.run_ok(&["--list", "--all"]);
-    assert!(list.contains("[done]"));
+    let files = t.files();
+    let path = t.dir.path().join(&files[0]);
+    let content = std::fs::read_to_string(path).unwrap();
+    assert!(content.contains("status: done"));
 }
 
 #[test]
@@ -197,22 +199,38 @@ fn done_prints_feedback() {
     let output = t.run(&["--done", &id]);
     assert!(output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(
-        stderr.contains("done:") && stderr.contains(&id),
-        "expected feedback on stderr, got: {stderr}"
-    );
+    assert!(stderr.contains("done:"), "should print feedback: {stderr}");
+    assert!(stderr.contains(&id));
+    assert!(stderr.contains("feedback test"));
 }
 
 #[test]
-fn delete_prints_feedback() {
+fn reopen_prints_feedback() {
     let t = TdoTest::new();
-    let id = t.run_ok(&["feedback delete"]);
+    let id = t.run_ok(&["reopen test"]);
+    t.run_ok(&["--done", &id]);
+
+    let output = t.run(&["--reopen", &id]);
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("reopened:"),
+        "should print feedback: {stderr}"
+    );
+    assert!(stderr.contains(&id));
+}
+
+#[test]
+fn delete_force_prints_feedback() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["delete feedback"]);
 
     let output = t.run(&["--delete", &id, "--force"]);
     assert!(output.status.success());
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(
-        stderr.contains("deleted:") && stderr.contains(&id),
-        "expected feedback on stderr, got: {stderr}"
+        stderr.contains("deleted:"),
+        "should print feedback: {stderr}"
     );
+    assert!(stderr.contains(&id));
 }

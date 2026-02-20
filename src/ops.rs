@@ -4,7 +4,7 @@ use anyhow::{bail, Context, Result};
 use jiff::civil::DateTime;
 
 use crate::storage::Store;
-use crate::todo::{Frontmatter, Status};
+use crate::todo::{Frontmatter, Status, Todo};
 
 /// Create a new todo, returning the assigned ID.
 pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
@@ -17,56 +17,53 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
     store.create(&fm, None)
 }
 
-/// Mark a todo as done. Returns (full_id, title).
-pub fn mark_done(store: &mut Store, id: &str) -> Result<(String, String)> {
+/// Mark a todo as done. Returns the updated todo.
+pub fn mark_done(store: &mut Store, id: &str) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.status = Status::Done;
-    let full_id = todo.id.clone();
-    let title = todo.title().to_string();
     store.save(&todo)?;
-    Ok((full_id, title))
+    Ok(todo)
 }
 
-/// Reopen a done todo. Returns (full_id, title).
-pub fn reopen_todo(store: &mut Store, id: &str) -> Result<(String, String)> {
+/// Reopen a done todo. Returns the updated todo.
+pub fn reopen_todo(store: &mut Store, id: &str) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.status = Status::Open;
-    let full_id = todo.id.clone();
-    let title = todo.title().to_string();
     store.save(&todo)?;
-    Ok((full_id, title))
+    Ok(todo)
 }
 
-/// Delete a todo. If interactive, prompts for confirmation.
-/// Returns Some((full_id, title)) if deleted, None if cancelled.
+/// Delete a todo. Returns Some(deleted_todo) on success, None if cancelled.
+///
+/// - Interactive mode: prompts for confirmation
+/// - Non-interactive mode: requires `force` flag
 pub fn delete_todo(
     store: &mut Store,
     id: &str,
     interactive: bool,
     force: bool,
-) -> Result<Option<(String, String)>> {
+) -> Result<Option<Todo>> {
     let todo = store.find_by_id(id)?;
-    let title = todo.title().to_string();
-    let full_id = todo.id.clone();
-
-    if interactive && !force {
-        eprint!("Delete '{title}'? [y/N] ");
+    if interactive {
+        eprint!("Delete '{}'? [y/N] ", todo.title());
         io::stderr().flush()?;
         let mut line = String::new();
         io::stdin().lock().read_line(&mut line)?;
         if !line.trim().eq_ignore_ascii_case("y") {
             return Ok(None);
         }
-    } else if !interactive && !force {
+    } else if !force {
         bail!("use --force to delete non-interactively");
     }
-
-    store.delete(&full_id)?;
-    Ok(Some((full_id, title)))
+    let deleted = store.delete(&todo.id)?;
+    Ok(Some(deleted))
 }
 
-/// Edit a todo. If title/body are provided, update non-interactively.
-/// Otherwise spawn $VISUAL/$EDITOR.
+/// Edit a todo.
+///
+/// - With --title/--body: update fields directly
+/// - Interactive: spawn $VISUAL/$EDITOR
+/// - Non-interactive without flags: error
 pub fn edit_todo(
     store: &mut Store,
     id: &str,
@@ -74,8 +71,8 @@ pub fn edit_todo(
     new_body: Option<&str>,
     interactive: bool,
 ) -> Result<()> {
-    let mut todo = store.find_by_id(id)?;
     if new_title.is_some() || new_body.is_some() {
+        let mut todo = store.find_by_id(id)?;
         if let Some(t) = new_title {
             todo.frontmatter.title = t.to_string();
         }
@@ -88,19 +85,21 @@ pub fn edit_todo(
         }
         store.save(&todo)
     } else if interactive {
+        let todo = store.find_by_id(id)?;
         let path = store.path_for(&todo);
-        let editor = std::env::var("VISUAL")
-            .or_else(|_| std::env::var("EDITOR"))
-            .unwrap_or_else(|_| "vi".to_string());
+        let editor = resolve_editor();
         let status = std::process::Command::new(&editor)
             .arg(&path)
             .status()
             .with_context(|| {
-                format!("failed to launch editor '{editor}' (set $VISUAL or $EDITOR)")
+                format!(
+                    "failed to run editor '{editor}': is it installed? Set $VISUAL or $EDITOR"
+                )
             })?;
         if !status.success() {
             bail!("editor exited with status {status}");
         }
+        store.refresh(&todo.id)?;
         Ok(())
     } else {
         bail!("cannot open editor non-interactively; use --title or --body");
@@ -108,20 +107,29 @@ pub fn edit_todo(
 }
 
 /// Print todos to stdout.
-pub fn list_todos(store: &mut Store, all: bool) -> Result<()> {
-    let todos = if all {
-        store.list_all()?
-    } else {
-        store.list_open()?
-    };
+pub fn list_todos(store: &Store, all: bool) -> Result<()> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
-    for todo in &todos {
-        if all && !todo.is_open() {
-            writeln!(out, "{}  [done] {}", todo.id, todo.title())?;
-        } else {
+    if all {
+        for todo in store.list_all() {
+            if !todo.is_open() {
+                writeln!(out, "{}  [done] {}", todo.id, todo.title())?;
+            } else {
+                writeln!(out, "{}  {}", todo.id, todo.title())?;
+            }
+        }
+    } else {
+        for todo in store.list_open() {
             writeln!(out, "{}  {}", todo.id, todo.title())?;
         }
     }
     Ok(())
+}
+
+fn resolve_editor() -> String {
+    std::env::var("VISUAL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| std::env::var("EDITOR").ok().filter(|s| !s.is_empty()))
+        .unwrap_or_else(|| "vim".to_string())
 }

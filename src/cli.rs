@@ -29,6 +29,10 @@ pub struct Cli {
     #[arg(long, value_name = "ID", conflicts_with_all = ["edit", "done", "reopen", "list"])]
     pub delete: Option<String>,
 
+    /// Delete without confirmation (non-interactive)
+    #[arg(long, requires = "delete")]
+    pub force: bool,
+
     /// List todos
     #[arg(long, conflicts_with_all = ["edit", "done", "reopen", "delete"])]
     pub list: bool,
@@ -44,10 +48,6 @@ pub struct Cli {
     /// With --edit: set new body non-interactively
     #[arg(long, value_name = "TEXT", requires = "edit")]
     pub body: Option<String>,
-
-    /// Skip confirmation prompt (for --delete)
-    #[arg(long, requires = "delete")]
-    pub force: bool,
 
     /// Override .todo/ directory location
     #[arg(long, value_name = "PATH")]

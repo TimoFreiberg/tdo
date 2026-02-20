@@ -27,21 +27,19 @@ fn main() -> Result<()> {
             ops::edit_todo(&mut store, &id, title.as_deref(), body.as_deref(), interactive)?;
         }
         Command::Done(id) => {
-            let (full_id, title) = ops::mark_done(&mut store, &id)?;
-            eprintln!("done: {full_id}  {title}");
+            let todo = ops::mark_done(&mut store, &id)?;
+            eprintln!("done: {}  {}", todo.id, todo.title());
         }
         Command::Reopen(id) => {
-            let (full_id, title) = ops::reopen_todo(&mut store, &id)?;
-            eprintln!("reopened: {full_id}  {title}");
+            let todo = ops::reopen_todo(&mut store, &id)?;
+            eprintln!("reopened: {}  {}", todo.id, todo.title());
         }
-        Command::Delete { id, force } => {
-            match ops::delete_todo(&mut store, &id, is_tty, force)? {
-                Some((full_id, title)) => eprintln!("deleted: {full_id}  {title}"),
-                None => eprintln!("cancelled"),
-            }
-        }
-        Command::List { all } => ops::list_todos(&mut store, all)?,
-        Command::PlainList => ops::list_todos(&mut store, false)?,
+        Command::Delete { id, force } => match ops::delete_todo(&mut store, &id, is_tty, force)? {
+            Some(todo) => eprintln!("deleted: {}  {}", todo.id, todo.title()),
+            None => eprintln!("cancelled"),
+        },
+        Command::List { all } => ops::list_todos(&store, all)?,
+        Command::PlainList => ops::list_todos(&store, false)?,
         Command::Tui => tui::run_tui(store)?,
     }
     Ok(())

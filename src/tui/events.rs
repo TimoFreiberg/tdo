@@ -19,7 +19,7 @@ pub fn run_event_loop(
             if handle_key(terminal, app, key)? == ControlFlow::Break(()) {
                 return Ok(());
             }
-            app.reload()?;
+            app.reload();
         }
     }
 }
@@ -46,9 +46,10 @@ fn handle_normal(
         KeyCode::Char('j') | KeyCode::Down => app.cursor_down(),
         KeyCode::Char('k') | KeyCode::Up => app.cursor_up(),
         KeyCode::Char('d') => {
-            if let Some(todo) = app.selected() {
+            if let Some(todo) = app.todos.get(app.cursor) {
                 let id = todo.id.clone();
-                if todo.is_open() {
+                let is_open = todo.is_open();
+                if is_open {
                     ops::mark_done(&mut app.store, &id)?;
                 } else {
                     ops::reopen_todo(&mut app.store, &id)?;
@@ -56,18 +57,14 @@ fn handle_normal(
             }
         }
         KeyCode::Char('x') => {
-            if let Some(todo) = app.selected() {
-                app.mode = Mode::ConfirmDelete {
-                    id: todo.id.clone(),
-                    title: todo.title().to_string(),
-                };
+            if let Some(todo) = app.todos.get(app.cursor) {
+                let id = todo.id.clone();
+                let title = todo.title().to_string();
+                app.mode = Mode::ConfirmDelete { id, title };
             }
         }
-        KeyCode::Char('a') => {
-            app.show_all = !app.show_all;
-        }
         KeyCode::Enter | KeyCode::Char('e') => {
-            if let Some(todo) = app.selected() {
+            if let Some(todo) = app.todos.get(app.cursor) {
                 let id = todo.id.clone();
                 // Suspend TUI for editor
                 crossterm::terminal::disable_raw_mode()?;
@@ -80,10 +77,7 @@ fn handle_normal(
 
                 let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
 
-                // Editor may have changed the file; invalidate cache
-                app.store.invalidate();
-
-                // Resume TUI regardless of edit result
+                // Resume TUI regardless of editor result
                 crossterm::terminal::enable_raw_mode()?;
                 terminal.clear()?;
 
@@ -94,6 +88,10 @@ fn handle_normal(
             app.mode = Mode::NewTodo {
                 input: String::new(),
             };
+        }
+        KeyCode::Char('a') => {
+            app.show_all = !app.show_all;
+            app.reload();
         }
         _ => {}
     }

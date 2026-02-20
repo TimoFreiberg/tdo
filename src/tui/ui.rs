@@ -17,7 +17,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "j/k: navigate  e: edit  d: done/reopen  x: delete  n: new  a: all  q: quit",
+                "j/k:move  e:edit  d:done/reopen  x:delete  n:new  a:all  q:quit",
                 chunks[1],
             );
         }
@@ -25,9 +25,11 @@ pub fn draw(f: &mut Frame, app: &App) {
             draw_input(f, "New todo: ", input, chunks[1]);
         }
         Mode::ConfirmDelete { title, .. } => {
-            let text = format!("Delete '{title}'? y: confirm  Esc: cancel");
-            let widget = Paragraph::new(text);
-            f.render_widget(widget, chunks[1]);
+            draw_help(
+                f,
+                &format!("Delete '{title}'? y:confirm  n/Esc:cancel"),
+                chunks[1],
+            );
         }
     }
 }
@@ -38,19 +40,16 @@ fn draw_list(f: &mut Frame, app: &App, area: Rect) {
         .iter()
         .enumerate()
         .map(|(i, todo)| {
-            let label = if todo.is_open() {
-                format!("{}  {}", todo.id, todo.title())
-            } else {
-                format!("{}  [done] {}", todo.id, todo.title())
-            };
-            let mut style = if !todo.is_open() {
-                Style::default().fg(Color::DarkGray)
+            let style = if i == app.cursor {
+                Style::default().add_modifier(Modifier::REVERSED)
             } else {
                 Style::default()
             };
-            if i == app.cursor {
-                style = style.add_modifier(Modifier::REVERSED);
-            }
+            let label = if !todo.is_open() {
+                format!("{}  [done] {}", todo.id, todo.title())
+            } else {
+                format!("{}  {}", todo.id, todo.title())
+            };
             ListItem::new(label).style(style)
         })
         .collect();
