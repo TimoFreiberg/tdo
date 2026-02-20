@@ -45,7 +45,19 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
     let has_items_above = list_offset > 0;
     let has_items_below = selectable > list_offset + list_visible;
 
-    let mut block = Block::default().borders(Borders::ALL).title(" tdo ");
+    let all_todos = app.store.list_all();
+    let open_count = all_todos.iter().filter(|t| t.is_open()).count();
+    let done_count = all_todos.len() - open_count;
+
+    let title = Line::from(vec![
+        Span::raw(" tdo  "),
+        Span::styled(format!("{open_count} open"), Style::default().fg(Color::Green)),
+        Span::styled(" · ", Style::default().fg(Color::DarkGray)),
+        Span::styled(format!("{done_count} done"), Style::default().fg(Color::DarkGray)),
+        Span::raw(" "),
+    ]);
+
+    let mut block = Block::default().borders(Borders::ALL).title(title);
     if has_items_above {
         block = block.title_top(Line::from(" \u{25b2} ").alignment(Alignment::Right));
     }
