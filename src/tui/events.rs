@@ -113,9 +113,13 @@ fn handle_normal(
     } else {
         // Cursor is on a todo item (index > 0)
         match key.code {
-            KeyCode::Esc => return Ok(ControlFlow::Break(())),
+            KeyCode::Char('q') | KeyCode::Esc => return Ok(ControlFlow::Break(())),
             KeyCode::Down => app.cursor_down(),
             KeyCode::Up => app.cursor_up(),
+            KeyCode::Char('a') => {
+                app.show_all = !app.show_all;
+                app.reload();
+            }
             KeyCode::Char('d') => {
                 if let Some(todo) = app.selected_todo() {
                     let id = todo.id.clone();
