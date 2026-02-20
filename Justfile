@@ -9,13 +9,13 @@ build-all: build-macos build-linux
 build-macos:
     cargo build --release --target {{macos_target}}
     mkdir -p {{dist}}
-    cp target/{{macos_target}}/release/tdo {{dist}}/tdo-macos-arm64
+    zstd -19 -f -o {{dist}}/tdo-macos-arm64.zst target/{{macos_target}}/release/tdo
 
 # Build for Linux x86_64 (uses rust-lld, no cross/Docker needed)
 build-linux:
     cargo build --release --target {{linux_target}}
     mkdir -p {{dist}}
-    cp target/{{linux_target}}/release/tdo {{dist}}/tdo-linux-x86_64
+    zstd -19 -f -o {{dist}}/tdo-linux-x86_64.zst target/{{linux_target}}/release/tdo
 
 # Copy wrapper script to dist/
 dist: build-all

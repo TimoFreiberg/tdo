@@ -26,4 +26,12 @@ case "${OS}" in
         ;;
 esac
 
-exec "${SCRIPT_DIR}/${BIN}" "$@"
+BIN_PATH="${SCRIPT_DIR}/${BIN}"
+
+# Decompress on first run if only the .zst file exists
+if [ ! -x "${BIN_PATH}" ] && [ -f "${BIN_PATH}.zst" ]; then
+    zstd -d -o "${BIN_PATH}" "${BIN_PATH}.zst"
+    chmod +x "${BIN_PATH}"
+fi
+
+exec "${BIN_PATH}" "$@"
