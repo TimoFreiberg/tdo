@@ -74,24 +74,6 @@ fn handle_normal(
     if ctrl {
         match key.code {
             KeyCode::Char('q') => return Ok(ControlFlow::Break(())),
-            KeyCode::Char('d') => {
-                if let Some(todo) = app.selected_todo() {
-                    let id = todo.id.clone();
-                    let is_open = todo.is_open();
-                    if is_open {
-                        ops::mark_done(&mut app.store, &id)?;
-                    } else {
-                        ops::reopen_todo(&mut app.store, &id)?;
-                    }
-                }
-            }
-            KeyCode::Char('x') => {
-                if let Some(todo) = app.selected_todo() {
-                    let id = todo.id.clone();
-                    let title = todo.title().to_string();
-                    app.mode = Mode::ConfirmDelete { id, title };
-                }
-            }
             KeyCode::Char('a') => {
                 app.show_all = !app.show_all;
                 app.reload();
@@ -134,6 +116,24 @@ fn handle_normal(
             KeyCode::Esc => return Ok(ControlFlow::Break(())),
             KeyCode::Down => app.cursor_down(),
             KeyCode::Up => app.cursor_up(),
+            KeyCode::Char('d') => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    let is_open = todo.is_open();
+                    if is_open {
+                        ops::mark_done(&mut app.store, &id)?;
+                    } else {
+                        ops::reopen_todo(&mut app.store, &id)?;
+                    }
+                }
+            }
+            KeyCode::Char('x') => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    let title = todo.title().to_string();
+                    app.mode = Mode::ConfirmDelete { id, title };
+                }
+            }
             KeyCode::Enter => {
                 if let Some(todo) = app.selected_todo() {
                     let id = todo.id.clone();

@@ -21,7 +21,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "Enter:edit  ^D:done  ^X:delete  ^A:all  ^Q:quit",
+                "Enter:edit  d:done  x:delete  ^A:all  ^Q:quit",
                 chunks[1],
             );
         }
