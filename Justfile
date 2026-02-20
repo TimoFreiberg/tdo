@@ -22,6 +22,11 @@ dist: build-all
     cp tdo.sh {{dist}}/tdo
     chmod +x {{dist}}/tdo
 
+# Install compressed binaries and wrapper to ~/dotfiles/bin
+install: dist
+    mkdir -p ~/dotfiles/bin
+    cp {{dist}}/tdo-macos-arm64.zst {{dist}}/tdo-linux-x86_64.zst {{dist}}/tdo ~/dotfiles/bin/
+
 # Run tests
 test:
     cargo test
