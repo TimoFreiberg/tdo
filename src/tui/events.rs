@@ -4,24 +4,47 @@ use std::ops::ControlFlow;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
+use ratatui::{Terminal, TerminalOptions, Viewport};
 
 use super::{App, Mode};
 use crate::ops;
 
 pub fn run_event_loop(
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    mut terminal: Terminal<CrosstermBackend<Stdout>>,
     app: &mut App,
-) -> Result<()> {
+) -> Result<Terminal<CrosstermBackend<Stdout>>> {
+    let mut current_height = app.viewport_height();
     loop {
         terminal.draw(|f| super::ui::draw(f, &mut *app))?;
         if let Event::Key(key) = event::read()? {
-            if handle_key(terminal, app, key)? == ControlFlow::Break(()) {
-                return Ok(());
+            if handle_key(&mut terminal, app, key)? == ControlFlow::Break(()) {
+                return Ok(terminal);
             }
             app.reload();
+            let new_height = app.viewport_height();
+            if new_height > current_height {
+                terminal = grow_viewport(terminal, new_height)?;
+                current_height = new_height;
+            }
         }
     }
+}
+
+fn grow_viewport(
+    mut terminal: Terminal<CrosstermBackend<Stdout>>,
+    new_height: u16,
+) -> Result<Terminal<CrosstermBackend<Stdout>>> {
+    let area = terminal.get_frame().area();
+    crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
+    drop(terminal);
+    let backend = CrosstermBackend::new(std::io::stdout());
+    let new_terminal = Terminal::with_options(
+        backend,
+        TerminalOptions {
+            viewport: Viewport::Inline(new_height),
+        },
+    )?;
+    Ok(new_terminal)
 }
 
 fn handle_key(

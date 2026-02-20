@@ -100,7 +100,7 @@ pub fn run_tui(store: Store) -> Result<()> {
     let app = App::new(store);
     let height = app.viewport_height();
 
-    let mut terminal = Terminal::with_options(
+    let terminal = Terminal::with_options(
         backend,
         TerminalOptions {
             viewport: Viewport::Inline(height),
@@ -108,16 +108,21 @@ pub fn run_tui(store: Store) -> Result<()> {
     )?;
 
     let mut app = app;
-    let result = events::run_event_loop(&mut terminal, &mut app);
+    let result = events::run_event_loop(terminal, &mut app);
 
     // Disable explicitly so cursor positioning works in cooked mode.
     // The guard will no-op on drop since raw mode is already off.
     terminal::disable_raw_mode()?;
-    let viewport = terminal.get_frame().area();
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::cursor::MoveTo(0, viewport.y + viewport.height)
-    )?;
-    println!();
-    result
+    match result {
+        Ok(mut terminal) => {
+            let viewport = terminal.get_frame().area();
+            crossterm::execute!(
+                std::io::stdout(),
+                crossterm::cursor::MoveTo(0, viewport.y + viewport.height)
+            )?;
+            println!();
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
 }
