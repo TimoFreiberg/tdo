@@ -21,14 +21,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "^D:done  ^X:delete  ^A:all  ^Q:quit",
+                "Enter:edit  ^D:done  ^X:delete  ^A:all  ^Q:quit",
                 chunks[1],
             );
         }
         Mode::ConfirmDelete { title, .. } => {
             draw_help(
                 f,
-                &format!("Delete '{title}'? y:confirm  n/Esc:cancel"),
+                &format!("Delete '{title}'? y/Enter:confirm  n/Esc:cancel"),
                 chunks[1],
             );
         }

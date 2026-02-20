@@ -172,7 +172,7 @@ fn handle_confirm_delete(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>
     };
 
     match key.code {
-        KeyCode::Char('y') => {
+        KeyCode::Char('y') | KeyCode::Enter => {
             app.store.delete(&id)?;
             app.mode = Mode::Normal;
         }
