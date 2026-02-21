@@ -60,8 +60,8 @@ Optional body content added via editor.
 | `tdo --edit <id>` | Open the todo file in `$EDITOR` (fallback: `vim`). Must also support non-interactive editing (e.g. `--edit <id> --title <text>` or accepting new content on stdin) so Claude Code can rewrite todos without spawning an editor |
 | `tdo --done <id>` | Mark a todo as done |
 | `tdo --delete <id>` | Delete a todo file (confirms if interactive) |
-| `tdo --list` | List open todos |
-| `tdo --list --all` | List all todos including done |
+| `tdo --list` | List open todos (with GC) |
+| `tdo --list --all` | List all todos including done (with GC) |
 | `tdo --assign <id> [name]` | Assign a todo, optionally to a named person |
 | `tdo --unassign <id>` | Remove assignment from a todo |
 
@@ -85,6 +85,20 @@ Minimal v1 interface built with `ratatui` + `crossterm`:
 
 Assigned todos are sorted last in the list and displayed with a magenta
 `(assigned)` suffix (or `(assigned: name)` if a name is set).
+
+## Garbage collection
+
+The list operation (`--list` and bare non-interactive invocation) performs
+automatic GC before printing:
+
+1. **Stale done cleanup** — Done todos with `done_at` older than 7 days are
+   deleted from disk and the store cache. A `♻ gc:` line is printed to stderr
+   per deletion.
+2. **Stale assignment warnings** — Open assigned todos with `assigned_at`
+   older than 7 days emit a `⚠ stale assignment:` warning to stderr.
+
+All GC output goes to stderr so stdout remains a clean list suitable for
+piping.
 
 ## Dependencies
 

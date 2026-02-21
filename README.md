@@ -48,6 +48,18 @@ assigned. `done_at` records the timestamp when the todo was first marked done.
 When listing todos, assigned todos show a magenta `(assigned)` or
 `(assigned: name)` suffix.
 
+## Garbage collection
+
+The `--list` command performs automatic garbage collection:
+
+- **Done todos** whose `done_at` is more than 7 days ago are deleted. A
+  `♻ gc:` message is printed to stderr for each removed todo.
+- **Assigned todos** whose `assigned_at` is more than 7 days ago trigger a
+  `⚠ stale assignment:` warning on stderr.
+
+All GC/warning output goes to stderr so it doesn't interfere with piped
+stdout (e.g. when consumed by a TUI agent).
+
 Files are named `<hex>-<slug>.md` (e.g. `a3f9-fix-the-login-bug.md`) and
 stored in `.todo/` relative to the current directory. The hex prefix is the
 ID used in commands.

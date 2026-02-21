@@ -137,7 +137,56 @@ const MAGENTA: &str = "\x1b[35m";
 const RESET: &str = "\x1b[0m";
 
 /// Print todos to stdout, with color when connected to a terminal.
-pub fn list_todos(store: &Store, all: bool) -> Result<()> {
+///
+/// Garbage-collects done todos whose `done_at` is more than 7 days ago,
+/// and warns (on stderr) about assigned todos whose `assigned_at` is more
+/// than 7 days ago.
+pub fn list_todos(store: &mut Store, all: bool) -> Result<()> {
+    let now = jiff::Zoned::now();
+    let one_week = jiff::SignedDuration::from_hours(7 * 24);
+
+    // Garbage-collect stale done todos.
+    let stale_done_ids: Vec<(String, String)> = store
+        .list_all()
+        .iter()
+        .filter(|t| t.frontmatter.status == Status::Done)
+        .filter_map(|t| {
+            let done_at = t.frontmatter.done_at.as_ref()?;
+            let done_zoned = done_at.to_zoned(jiff::tz::TimeZone::system()).ok()?;
+            if now.duration_since(&done_zoned) > one_week {
+                Some((t.id.clone(), t.frontmatter.title.clone()))
+            } else {
+                None
+            }
+        })
+        .collect();
+    for (id, title) in &stale_done_ids {
+        store.delete(id)?;
+        eprintln!("♻ gc: removed done todo {id}  {title}");
+    }
+
+    // Warn about stale assigned todos.
+    let stale_assigned: Vec<(String, String)> = store
+        .list_all()
+        .iter()
+        .filter(|t| t.is_open() && t.is_assigned())
+        .filter_map(|t| {
+            let at = t.frontmatter.assigned_at.as_ref()?;
+            let at_zoned = at.to_zoned(jiff::tz::TimeZone::system()).ok()?;
+            if now.duration_since(&at_zoned) > one_week {
+                Some((t.id.clone(), t.frontmatter.title.clone()))
+            } else {
+                None
+            }
+        })
+        .collect();
+    if !stale_assigned.is_empty() {
+        for (id, title) in &stale_assigned {
+            eprintln!("⚠ stale assignment: {id}  {title} (assigned >7 days ago)");
+        }
+    }
+
+    // Print the list.
     let stdout = io::stdout();
     let mut out = stdout.lock();
     let color = stdout_is_tty();

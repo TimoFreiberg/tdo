@@ -12,7 +12,7 @@ Parse `$ARGUMENTS` and dispatch:
 |---|---|
 | *(empty)* | Run `tdo list`. If there are any, ask the user what they want to do next. If none, say so. |
 | `add <title>` | Create a new todo |
-| `list` | Run `tdo list` (open only) or `tdo list --all` (include done) |
+| `list` | Run `tdo list` (open only) or `tdo list --all` (include done). Note: listing triggers GC — done todos >7 days old are auto-deleted, stale assignments warn on stderr. |
 | `done <query>` | Mark a todo as done |
 | `reopen <query>` | Reopen a done todo |
 | `edit <query>` | Edit a todo's body |
