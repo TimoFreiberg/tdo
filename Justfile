@@ -31,6 +31,11 @@ install: dist
 test:
     cargo test
 
+# Deploy skill file to global Claude skills
+deploy-skill:
+    mkdir -p ~/.claude/skills/tdo
+    cp SKILL.md ~/.claude/skills/tdo/SKILL.md
+
 # Clean build artifacts and dist
 clean:
     cargo clean
