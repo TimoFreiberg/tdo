@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: tdo-macos-arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact: tdo-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install musl tools
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: cargo build --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: target/${{ matrix.target }}/release/tdo
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Prepare release assets
+        run: |
+          chmod +x artifacts/tdo-macos-arm64/tdo artifacts/tdo-linux-x86_64/tdo
+          mv artifacts/tdo-macos-arm64/tdo tdo-macos-arm64
+          mv artifacts/tdo-linux-x86_64/tdo tdo-linux-x86_64
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            tdo-macos-arm64
+            tdo-linux-x86_64
