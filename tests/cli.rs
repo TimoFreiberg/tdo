@@ -112,18 +112,6 @@ fn delete_force_removes_file() {
 }
 
 #[test]
-fn edit_non_interactive_title() {
-    let t = TdoTest::new();
-    let id = t.run_ok(&["add", "original title"]);
-    t.run_ok(&["edit", &id, "--title", "updated title"]);
-
-    let files = t.files();
-    let path = t.dir.path().join(&files[0]);
-    let content = std::fs::read_to_string(path).unwrap();
-    assert!(content.contains("title: updated title"));
-}
-
-#[test]
 fn edit_non_interactive_body() {
     let t = TdoTest::new();
     let id = t.run_ok(&["add", "some task"]);

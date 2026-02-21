@@ -138,7 +138,7 @@ fn handle_normal(
                     crossterm::cursor::Show,
                 )?;
 
-                let edit_result = ops::edit_todo(&mut app.store, &id, None, None, true);
+                let edit_result = ops::edit_todo(&mut app.store, &id, None, true);
 
                 // Resume TUI. Check edit_result before resume errors so
                 // a more actionable editor error isn't swallowed.

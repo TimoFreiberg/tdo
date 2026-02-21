@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "tdo", about = "A local todo manager")]
+#[command(name = "tdo", about = "A local todo manager", after_help = "Titles are immutable after creation. To change a title, delete and recreate the todo.")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<SubCommand>,
@@ -21,13 +21,10 @@ pub enum SubCommand {
         #[arg(trailing_var_arg = true, required = true)]
         text: Vec<String>,
     },
-    /// Open a todo in $EDITOR, or update with --title/--body
+    /// Open a todo in $EDITOR, or update body with --body
     Edit {
         /// Todo ID (or unique prefix)
         id: String,
-        /// Set new title non-interactively
-        #[arg(long, value_name = "TEXT")]
-        title: Option<String>,
         /// Set new body non-interactively
         #[arg(long, value_name = "TEXT")]
         body: Option<String>,
@@ -62,7 +59,6 @@ pub enum Command {
     Create(String),
     Edit {
         id: String,
-        title: Option<String>,
         body: Option<String>,
     },
     Done(String),
@@ -81,9 +77,8 @@ pub enum Command {
 pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
     match &cli.command {
         Some(SubCommand::Add { text }) => Command::Create(text.join(" ")),
-        Some(SubCommand::Edit { id, title, body }) => Command::Edit {
+        Some(SubCommand::Edit { id, body }) => Command::Edit {
             id: id.clone(),
-            title: title.clone(),
             body: body.clone(),
         },
         Some(SubCommand::Done { id }) => Command::Done(id.clone()),

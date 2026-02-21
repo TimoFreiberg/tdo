@@ -22,9 +22,9 @@ fn main() -> Result<()> {
             let id = ops::create_todo(&mut store, &title)?;
             println!("{id}");
         }
-        Command::Edit { id, title, body } => {
-            let interactive = is_tty && title.is_none() && body.is_none();
-            ops::edit_todo(&mut store, &id, title.as_deref(), body.as_deref(), interactive)?;
+        Command::Edit { id, body } => {
+            let interactive = is_tty && body.is_none();
+            ops::edit_todo(&mut store, &id, body.as_deref(), interactive)?;
         }
         Command::Done(id) => {
             let todo = ops::mark_done(&mut store, &id)?;

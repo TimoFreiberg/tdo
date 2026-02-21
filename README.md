@@ -8,7 +8,6 @@ A local todo manager. Stores todos as markdown files in `.todo/`.
 tdo                          # TUI (interactive) or list open todos (non-interactive)
 tdo some text here           # Create a todo with title "some text here"
 tdo --edit <id>              # Open todo in $VISUAL/$EDITOR
-tdo --edit <id> --title X    # Update title non-interactively
 tdo --done <id>              # Mark todo as done
 tdo --reopen <id>            # Reopen a done todo
 tdo --delete <id>            # Delete todo file (prompts if interactive)
@@ -41,3 +40,7 @@ Optional body content.
 Files are named `<hex>-<slug>.md` (e.g. `a3f9-fix-the-login-bug.md`) and
 stored in `.todo/` relative to the current directory. The hex prefix is the
 ID used in commands.
+
+Titles are immutable after creation — the filename slug is derived from the
+title at creation time and is not updated. If a title needs to change, delete
+the todo and create a new one.

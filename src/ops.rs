@@ -62,28 +62,22 @@ pub fn delete_todo(
 
 /// Edit a todo.
 ///
-/// - With --title/--body: update fields directly
+/// - With --body: update body directly
 /// - Interactive: spawn $VISUAL/$EDITOR
 /// - Non-interactive without flags: error
 pub fn edit_todo(
     store: &mut Store,
     id: &str,
-    new_title: Option<&str>,
     new_body: Option<&str>,
     interactive: bool,
 ) -> Result<()> {
-    if new_title.is_some() || new_body.is_some() {
+    if let Some(b) = new_body {
         let mut todo = store.find_by_id(id)?;
-        if let Some(t) = new_title {
-            todo.frontmatter.title = t.to_string();
-        }
-        if let Some(b) = new_body {
-            todo.body = if b.is_empty() {
-                None
-            } else {
-                Some(b.to_string())
-            };
-        }
+        todo.body = if b.is_empty() {
+            None
+        } else {
+            Some(b.to_string())
+        };
         store.save(&todo)
     } else if interactive {
         let todo = store.find_by_id(id)?;
@@ -103,7 +97,7 @@ pub fn edit_todo(
         store.refresh(&todo.id)?;
         Ok(())
     } else {
-        bail!("cannot open editor non-interactively; use --title or --body");
+        bail!("cannot open editor non-interactively; use --body");
     }
 }
 
