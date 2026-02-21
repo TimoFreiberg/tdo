@@ -16,10 +16,9 @@ release version:
     fi
     sed -i '' 's/^version = ".*"/version = "{{version}}"/' Cargo.toml
     cargo check --quiet
-    git add Cargo.toml Cargo.lock
-    git commit -m "chore: bump version to {{version}}"
-    git tag -a "v{{version}}" -m "v{{version}}"
-    git push origin main "v{{version}}"
+    jj commit Cargo.toml Cargo.lock -m "chore: bump version to {{version}}"
+    jj tag set "v{{version}}" -r @-
+    git push origin tag "v{{version}}"
 
 # Install wrapper script and skill file into dotfiles
 install:
