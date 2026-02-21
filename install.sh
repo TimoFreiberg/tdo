@@ -38,3 +38,10 @@ fi
 
 chmod +x "${INSTALL_DIR}/tdo"
 echo "Installed tdo to ${INSTALL_DIR}/tdo"
+
+# Install Claude Code skill file
+SKILL_DIR="${HOME}/.claude/skills/tdo"
+SKILL_URL="https://raw.githubusercontent.com/${REPO}/main/SKILL.md"
+mkdir -p "${SKILL_DIR}"
+curl -fsSL -o "${SKILL_DIR}/SKILL.md" "${SKILL_URL}"
+echo "Installed skill to ${SKILL_DIR}/SKILL.md"
