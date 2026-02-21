@@ -1,7 +1,7 @@
 ---
 name: tdo
 description: "Manage TODOs with the tdo CLI. Handles natural-language requests like 'create a todo for that' or 'mark that done'."
-argument-hint: "[add <title> | list | done <query> | reopen <query> | edit <query> | delete <query>]"
+argument-hint: "[add <title> | list | done <query> | reopen <query> | edit <query> | delete <query> | refine <query>]"
 ---
 
 ## Operations
@@ -17,6 +17,7 @@ Parse `$ARGUMENTS` and dispatch:
 | `reopen <query>` | Reopen a done todo |
 | `edit <query>` | Edit a todo's body |
 | `delete <query>` | Delete a todo |
+| `refine <query>` | Research and refine a todo through discussion |
 | Free-form text without a known verb | Treat as `add <text>` |
 
 ## Add
@@ -41,3 +42,24 @@ Match the query to an ID (see above), then run the command:
 - `tdo delete <id> --force` (`--force` required for non-interactive use)
 
 Confirm the result to the user.
+
+## Refine
+
+1. Match the query to an ID (see "Matching queries to IDs")
+2. Read the todo file from `.todo/`
+3. **Research before asking.** Based on the TODO content, proactively gather context:
+   - If files, functions, or modules are mentioned, read them
+   - If related TODOs exist, read those too
+   - If the TODO references a bug or behavior, look at the relevant code
+   - Search the codebase for anything directly related to the TODO's subject
+   Do NOT ask the user questions you could answer by reading code or files.
+4. Present the current TODO content and a brief summary of what you found
+5. Think critically about what's missing or unclear:
+   - Is the problem or goal clearly defined?
+   - Are there acceptance criteria or a definition of done?
+   - Are there edge cases, constraints, or dependencies worth noting?
+   - Is there relevant context (affected files, related TODOs, prior decisions)?
+   - Could the TODO be split into smaller, more actionable items?
+6. Use AskUserQuestion to ask clarifying questions — only things that require human judgment. Include your own suggestions where possible.
+7. After the discussion, update the TODO body with refined content using `tdo edit <id> --body "..."`
+8. Show the user the final version
