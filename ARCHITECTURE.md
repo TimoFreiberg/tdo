@@ -40,6 +40,7 @@ Optional body content added via editor.
 - `title` — short description, set at creation time
 - `created` — ISO 8601 timestamp
 - `status` — `open` or `done`
+- `assigned` — optional assignee name; omitted when not set
 
 ## CLI design
 
@@ -59,6 +60,8 @@ Optional body content added via editor.
 | `tdo --delete <id>` | Delete a todo file (confirms if interactive) |
 | `tdo --list` | List open todos |
 | `tdo --list --all` | List all todos including done |
+| `tdo --assign <id> [name]` | Assign a todo, optionally to a named person |
+| `tdo --unassign <id>` | Remove assignment from a todo |
 
 ### Global flags
 
@@ -74,8 +77,12 @@ Minimal v1 interface built with `ratatui` + `crossterm`:
 - `j`/`k` or arrow keys to navigate
 - `Enter` to open in `$EDITOR`
 - `d` to mark done
+- `Ctrl+S` to toggle assignment on selected todo
 - `n` to create new (prompts for title)
 - `q` to quit
+
+Assigned todos are sorted last in the list and displayed with a magenta
+`(assigned)` suffix (or `(assigned: name)` if a name is set).
 
 ## Dependencies
 

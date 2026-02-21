@@ -14,6 +14,8 @@ tdo --delete <id>            # Delete todo file (prompts if interactive)
 tdo --delete <id> --force    # Delete without confirmation
 tdo --list                   # List open todos
 tdo --list --all             # List all todos including done
+tdo --assign <id> [name]     # Assign todo (optionally to a person)
+tdo --unassign <id>          # Remove assignment from todo
 ```
 
 ID arguments accept unique prefixes (e.g. `a3` instead of `a3f9`).
@@ -32,10 +34,14 @@ ID arguments accept unique prefixes (e.g. `a3` instead of `a3f9`).
 title: some text here
 created: 2026-02-20T14:30:52
 status: open
+assigned: someone
 ---
 
 Optional body content.
 ```
+
+The `assigned` field is optional and omitted when not set. When listing todos,
+assigned todos show a magenta `(assigned)` or `(assigned: name)` suffix.
 
 Files are named `<hex>-<slug>.md` (e.g. `a3f9-fix-the-login-bug.md`) and
 stored in `.todo/` relative to the current directory. The hex prefix is the
