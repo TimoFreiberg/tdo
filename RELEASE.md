@@ -38,6 +38,7 @@ On machines where this repo isn't cloned, the wrapper and skill file arrive thro
 
 - **First run**: downloads the latest release binary, then executes it.
 - **Subsequent runs**: executes the cached binary immediately. If the last update check was more than 24 hours ago, checks for a newer release in the background (non-blocking).
+- **Forced update**: `tdo --update` runs an immediate foreground update check, regardless of the stamp age. Any remaining arguments are forwarded to the binary after updating.
 - **Update check**: compares `tdo --version` output against the latest GitHub Release tag. Downloads only if they differ.
 
 ## When to re-run `just install`
