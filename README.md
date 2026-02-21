@@ -44,3 +44,7 @@ ID used in commands.
 Titles are immutable after creation — the filename slug is derived from the
 title at creation time and is not updated. If a title needs to change, delete
 the todo and create a new one.
+
+## Disclaimer
+
+This codebase is 100% vibecoded and intended for personal use.
