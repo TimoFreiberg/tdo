@@ -14,6 +14,7 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
         title: title.to_string(),
         created: now,
         status: Status::Open,
+        assigned: None,
     };
     store.create(&fm, None)
 }
@@ -101,9 +102,26 @@ pub fn edit_todo(
     }
 }
 
+/// Assign a todo. Returns the updated todo.
+pub fn assign_todo(store: &mut Store, id: &str, name: Option<&str>) -> Result<Todo> {
+    let mut todo = store.find_by_id(id)?;
+    todo.frontmatter.assigned = Some(name.unwrap_or("").to_string());
+    store.save(&todo)?;
+    Ok(todo)
+}
+
+/// Unassign a todo. Returns the updated todo.
+pub fn unassign_todo(store: &mut Store, id: &str) -> Result<Todo> {
+    let mut todo = store.find_by_id(id)?;
+    todo.frontmatter.assigned = None;
+    store.save(&todo)?;
+    Ok(todo)
+}
+
 /// ANSI escape helpers — only used when stdout is a TTY.
 const DIM: &str = "\x1b[2m";
 const CYAN: &str = "\x1b[36m";
+const MAGENTA: &str = "\x1b[35m";
 const RESET: &str = "\x1b[0m";
 
 /// Print todos to stdout, with color when connected to a terminal.
@@ -128,19 +146,37 @@ pub fn list_todos(store: &Store, all: bool) -> Result<()> {
 }
 
 fn write_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
+    let assigned_suffix = match &todo.frontmatter.assigned {
+        Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
+        Some(_) => " (assigned)".to_string(),
+        None => String::new(),
+    };
     if color {
-        writeln!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
+        write!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
+        if !assigned_suffix.is_empty() {
+            write!(out, "{MAGENTA}{assigned_suffix}{RESET}")?;
+        }
+        writeln!(out)?;
     } else {
-        writeln!(out, "{}  {}", todo.id, todo.title())?;
+        writeln!(out, "{}  {}{}", todo.id, todo.title(), assigned_suffix)?;
     }
     Ok(())
 }
 
 fn write_done_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
+    let assigned_suffix = match &todo.frontmatter.assigned {
+        Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
+        Some(_) => " (assigned)".to_string(),
+        None => String::new(),
+    };
     if color {
-        writeln!(out, "{DIM}{}  [done] {}{RESET}", todo.id, todo.title())?;
+        write!(out, "{DIM}{}  [done] {}", todo.id, todo.title())?;
+        if !assigned_suffix.is_empty() {
+            write!(out, "{assigned_suffix}")?;
+        }
+        writeln!(out, "{RESET}")?;
     } else {
-        writeln!(out, "{}  [done] {}", todo.id, todo.title())?;
+        writeln!(out, "{}  [done] {}{}", todo.id, todo.title(), assigned_suffix)?;
     }
     Ok(())
 }

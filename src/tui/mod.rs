@@ -36,7 +36,8 @@ pub enum Mode {
 
 impl App {
     pub fn new(store: Store) -> Self {
-        let todos: Vec<Todo> = store.list_open().into_iter().cloned().collect();
+        let mut todos: Vec<Todo> = store.list_open().into_iter().cloned().collect();
+        todos.sort_by_key(|t| t.is_assigned());
         let filtered: Vec<usize> = (0..todos.len()).collect();
         let mut list_state = ListState::default();
         if !filtered.is_empty() {
@@ -144,6 +145,7 @@ impl App {
         } else {
             self.store.list_open().into_iter().cloned().collect()
         };
+        self.todos.sort_by_key(|t| t.is_assigned());
         self.compute_filtered();
         self.clamp_selection();
     }

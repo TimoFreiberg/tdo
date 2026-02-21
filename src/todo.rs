@@ -14,6 +14,8 @@ pub struct Frontmatter {
     pub title: String,
     pub created: DateTime,
     pub status: Status,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assigned: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +33,10 @@ impl Todo {
 
     pub fn is_open(&self) -> bool {
         self.frontmatter.status == Status::Open
+    }
+
+    pub fn is_assigned(&self) -> bool {
+        self.frontmatter.assigned.is_some()
     }
 }
 
@@ -72,6 +78,7 @@ mod tests {
             title: "fix the login bug".to_string(),
             created: "2026-02-20T14:30:52".parse().unwrap(),
             status: Status::Open,
+            assigned: None,
         }
     }
 

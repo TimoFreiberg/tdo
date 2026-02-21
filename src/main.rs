@@ -38,6 +38,14 @@ fn main() -> Result<()> {
             Some(todo) => eprintln!("deleted: {}  {}", todo.id, todo.title()),
             None => eprintln!("cancelled"),
         },
+        Command::Assign { id, name } => {
+            let todo = ops::assign_todo(&mut store, &id, name.as_deref())?;
+            eprintln!("assigned: {}  {}", todo.id, todo.title());
+        }
+        Command::Unassign(id) => {
+            let todo = ops::unassign_todo(&mut store, &id)?;
+            eprintln!("unassigned: {}  {}", todo.id, todo.title());
+        }
         Command::List { all } => ops::list_todos(&store, all)?,
         Command::PlainList => ops::list_todos(&store, false)?,
         Command::Tui => tui::run_tui(store)?,

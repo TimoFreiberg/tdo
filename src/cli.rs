@@ -53,6 +53,18 @@ pub enum SubCommand {
         #[arg(long)]
         all: bool,
     },
+    /// Assign a todo
+    Assign {
+        /// Todo ID (or unique prefix)
+        id: String,
+        /// Optional assignee name
+        name: Option<String>,
+    },
+    /// Unassign a todo
+    Unassign {
+        /// Todo ID (or unique prefix)
+        id: String,
+    },
 }
 
 pub enum Command {
@@ -70,6 +82,8 @@ pub enum Command {
     List {
         all: bool,
     },
+    Assign { id: String, name: Option<String> },
+    Unassign(String),
     Tui,
     PlainList,
 }
@@ -88,6 +102,11 @@ pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
             force: *force,
         },
         Some(SubCommand::List { all }) => Command::List { all: *all },
+        Some(SubCommand::Assign { id, name }) => Command::Assign {
+            id: id.clone(),
+            name: name.clone(),
+        },
+        Some(SubCommand::Unassign { id }) => Command::Unassign(id.clone()),
         None if is_tty => Command::Tui,
         None => Command::PlainList,
     }

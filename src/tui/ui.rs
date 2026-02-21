@@ -21,7 +21,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Normal => {
             draw_help(
                 f,
-                "Enter:select  ^D:done  ^X:delete  ^A:all  ^Q:quit",
+                "Enter:select  ^D:done  ^S:assign  ^X:delete  ^A:all  ^Q:quit",
                 chunks[1],
             );
         }
@@ -104,12 +104,23 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
 
     for &idx in &app.filtered {
         let todo = &app.todos[idx];
-        let label = if !todo.is_open() {
-            format!("{}  [done] {}", todo.id, todo.title())
+        let mut spans = Vec::new();
+        if !todo.is_open() {
+            spans.push(Span::styled(
+                format!("{}  [done] {}", todo.id, todo.title()),
+                Style::default().fg(Color::DarkGray),
+            ));
         } else {
-            format!("{}  {}", todo.id, todo.title())
-        };
-        items.push(ListItem::new(label));
+            spans.push(Span::raw(format!("{}  {}", todo.id, todo.title())));
+        }
+        if todo.is_assigned() {
+            let suffix = match &todo.frontmatter.assigned {
+                Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
+                _ => " (assigned)".to_string(),
+            };
+            spans.push(Span::styled(suffix, Style::default().fg(Color::Magenta)));
+        }
+        items.push(ListItem::new(Line::from(spans)));
     }
 
     let list = List::new(items)

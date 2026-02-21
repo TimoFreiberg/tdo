@@ -100,6 +100,17 @@ fn handle_normal(
                     }
                 }
             }
+            KeyCode::Char('s') => {
+                if let Some(todo) = app.selected_todo() {
+                    let id = todo.id.clone();
+                    let is_assigned = todo.is_assigned();
+                    if is_assigned {
+                        ops::unassign_todo(&mut app.store, &id)?;
+                    } else {
+                        ops::assign_todo(&mut app.store, &id, None)?;
+                    }
+                }
+            }
             KeyCode::Char('x') => {
                 if let Some(todo) = app.selected_todo() {
                     let id = todo.id.clone();
