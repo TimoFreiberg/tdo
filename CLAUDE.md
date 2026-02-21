@@ -7,6 +7,7 @@ A local todo manager written in Rust. Stores todos as markdown files with YAML f
 - **README.md** — Usage guide, CLI examples, todo format, filename/ID scheme
 - **ARCHITECTURE.md** — Design docs: storage format, CLI modes, TUI keybindings, dependency table
 - **SKILL.md** — Claude Code skill spec for natural-language todo operations
+- **RELEASE.md** — Release process, distribution model, wrapper script details
 
 When making changes, update the relevant documentation files to reflect the new behavior. In particular:
 
