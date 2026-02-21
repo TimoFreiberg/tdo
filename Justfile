@@ -8,8 +8,18 @@ test:
 
 # Tag and push a release (triggers CI build + GitHub release)
 release version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! echo "{{version}}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$'; then
+        echo "error: '{{version}}' is not a valid semver version" >&2
+        exit 1
+    fi
+    sed -i '' 's/^version = ".*"/version = "{{version}}"/' Cargo.toml
+    cargo check --quiet
+    git add Cargo.toml Cargo.lock
+    git commit -m "chore: bump version to {{version}}"
     git tag -a "v{{version}}" -m "v{{version}}"
-    git push origin "v{{version}}"
+    git push origin main "v{{version}}"
 
 # Install wrapper script and skill file into dotfiles
 install:
