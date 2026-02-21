@@ -16,6 +16,7 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
         status: Status::Open,
         assigned: None,
         assigned_at: None,
+        done_at: None,
     };
     store.create(&fm, None)
 }
@@ -24,6 +25,10 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
 pub fn mark_done(store: &mut Store, id: &str) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.status = Status::Done;
+    if todo.frontmatter.done_at.is_none() {
+        let now: DateTime = DateTime::try_from(jiff::Zoned::now())?;
+        todo.frontmatter.done_at = Some(now);
+    }
     store.save(&todo)?;
     Ok(todo)
 }
@@ -32,6 +37,7 @@ pub fn mark_done(store: &mut Store, id: &str) -> Result<Todo> {
 pub fn reopen_todo(store: &mut Store, id: &str) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.status = Status::Open;
+    todo.frontmatter.done_at = None;
     store.save(&todo)?;
     Ok(todo)
 }

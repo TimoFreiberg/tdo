@@ -42,6 +42,7 @@ Optional body content added via editor.
 - `status` — `open` or `done`
 - `assigned` — optional assignee name; omitted when not set
 - `assigned_at` — optional timestamp of first assignment; omitted when not set
+- `done_at` — optional timestamp of first completion; omitted when not set
 
 ## CLI design
 

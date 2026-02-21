@@ -36,14 +36,17 @@ created: 2026-02-20T14:30:52
 status: open
 assigned: someone
 assigned_at: 2026-02-21T22:58:00
+done_at: 2026-02-21T23:00:00
 ---
 
 Optional body content.
 ```
 
-The `assigned` and `assigned_at` fields are optional and omitted when not set.
-`assigned_at` records the timestamp when the todo was first assigned. When
-listing todos, assigned todos show a magenta `(assigned)` or `(assigned: name)` suffix.
+The `assigned`, `assigned_at`, and `done_at` fields are optional and omitted
+when not set. `assigned_at` records the timestamp when the todo was first
+assigned. `done_at` records the timestamp when the todo was first marked done.
+When listing todos, assigned todos show a magenta `(assigned)` or
+`(assigned: name)` suffix.
 
 Files are named `<hex>-<slug>.md` (e.g. `a3f9-fix-the-login-bug.md`) and
 stored in `.todo/` relative to the current directory. The hex prefix is the
