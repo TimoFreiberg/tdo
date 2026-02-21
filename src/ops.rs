@@ -15,6 +15,7 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
         created: now,
         status: Status::Open,
         assigned: None,
+        assigned_at: None,
     };
     store.create(&fm, None)
 }
@@ -106,6 +107,10 @@ pub fn edit_todo(
 pub fn assign_todo(store: &mut Store, id: &str, name: Option<&str>) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.assigned = Some(name.unwrap_or("").to_string());
+    if todo.frontmatter.assigned_at.is_none() {
+        let now: DateTime = DateTime::try_from(jiff::Zoned::now())?;
+        todo.frontmatter.assigned_at = Some(now);
+    }
     store.save(&todo)?;
     Ok(todo)
 }
@@ -114,6 +119,7 @@ pub fn assign_todo(store: &mut Store, id: &str, name: Option<&str>) -> Result<To
 pub fn unassign_todo(store: &mut Store, id: &str) -> Result<Todo> {
     let mut todo = store.find_by_id(id)?;
     todo.frontmatter.assigned = None;
+    todo.frontmatter.assigned_at = None;
     store.save(&todo)?;
     Ok(todo)
 }

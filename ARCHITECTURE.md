@@ -41,6 +41,7 @@ Optional body content added via editor.
 - `created` — ISO 8601 timestamp
 - `status` — `open` or `done`
 - `assigned` — optional assignee name; omitted when not set
+- `assigned_at` — optional timestamp of first assignment; omitted when not set
 
 ## CLI design
 

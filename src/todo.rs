@@ -16,6 +16,8 @@ pub struct Frontmatter {
     pub status: Status,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub assigned: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assigned_at: Option<DateTime>,
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +81,7 @@ mod tests {
             created: "2026-02-20T14:30:52".parse().unwrap(),
             status: Status::Open,
             assigned: None,
+            assigned_at: None,
         }
     }
 
