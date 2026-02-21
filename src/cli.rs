@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "tdo", about = "A local todo manager", after_help = "Titles are immutable after creation. To change a title, delete and recreate the todo.")]
+#[command(name = "tdo", version, about = "A local todo manager", after_help = "Titles are immutable after creation. To change a title, delete and recreate the todo.")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<SubCommand>,
