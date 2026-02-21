@@ -11,10 +11,15 @@ release version:
     git tag -a "v{{version}}" -m "v{{version}}"
     git push origin "v{{version}}"
 
-# Deploy skill file to global Claude skills
-deploy-skill:
+# Install wrapper script and skill file into dotfiles
+install:
+    mkdir -p ~/dotfiles/bin
+    cp tdo-wrapper.sh ~/dotfiles/bin/tdo
+    chmod +x ~/dotfiles/bin/tdo
     mkdir -p ~/.claude/skills/tdo
     cp SKILL.md ~/.claude/skills/tdo/SKILL.md
+    @echo "Installed tdo wrapper to ~/dotfiles/bin/tdo"
+    @echo "Installed skill to ~/.claude/skills/tdo/SKILL.md"
 
 # Clean build artifacts
 clean:
