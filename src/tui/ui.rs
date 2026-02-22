@@ -49,13 +49,22 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
     let open_count = all_todos.iter().filter(|t| t.is_open()).count();
     let done_count = all_todos.len() - open_count;
 
-    let title = Line::from(vec![
+    let mut title_spans = vec![
         Span::raw(" tdo  "),
         Span::styled(format!("{open_count} open"), Style::default().fg(Color::Green)),
         Span::styled(" · ", Style::default().fg(Color::DarkGray)),
         Span::styled(format!("{done_count} done"), Style::default().fg(Color::DarkGray)),
-        Span::raw(" "),
-    ]);
+    ];
+    let skipped = app.store.skipped;
+    if skipped > 0 {
+        title_spans.push(Span::styled(" · ", Style::default().fg(Color::DarkGray)));
+        title_spans.push(Span::styled(
+            format!("{skipped} invalid"),
+            Style::default().fg(Color::Red),
+        ));
+    }
+    title_spans.push(Span::raw(" "));
+    let title = Line::from(title_spans);
 
     let mut block = Block::default().borders(Borders::ALL).title(title);
     if has_items_above {

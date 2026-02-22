@@ -11,6 +11,8 @@ pub struct Store {
     dir: PathBuf,
     _lock_file: File,
     cache: Vec<Todo>,
+    /// Number of `.md` files that failed to parse during load.
+    pub skipped: usize,
 }
 
 impl Store {
@@ -35,12 +37,13 @@ impl Store {
             }
         })?;
 
-        let cache = load_all_todos(dir)?;
+        let (cache, skipped) = load_all_todos(dir)?;
 
         Ok(Store {
             dir: dir.to_path_buf(),
             _lock_file: lock_file,
             cache,
+            skipped,
         })
     }
 
@@ -161,8 +164,11 @@ impl Store {
     }
 }
 
-fn load_all_todos(dir: &Path) -> Result<Vec<Todo>> {
+/// Load all valid todos from `dir`. Returns the list and the count of
+/// `.md` files that looked like todo files but failed to parse.
+fn load_all_todos(dir: &Path) -> Result<(Vec<Todo>, usize)> {
     let mut todos = Vec::new();
+    let mut skipped: usize = 0;
     let entries = fs::read_dir(dir)
         .with_context(|| format!("failed to read directory: {}", dir.display()))?;
     for entry in entries {
@@ -186,12 +192,13 @@ fn load_all_todos(dir: &Path) -> Result<Vec<Todo>> {
                 }
                 Err(e) => {
                     eprintln!("warning: skipping {}: {e}", path.display());
+                    skipped += 1;
                 }
             }
         }
     }
     todos.sort_by(|a, b| a.frontmatter.created.cmp(&b.frontmatter.created));
-    Ok(todos)
+    Ok((todos, skipped))
 }
 
 /// Extract the hex ID from a filename like "a3f9-fix-the-login-bug.md".
