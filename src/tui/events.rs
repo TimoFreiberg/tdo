@@ -135,7 +135,7 @@ fn handle_normal(
         }
         KeyCode::Enter => {
             if app.is_on_create_new() {
-                ops::create_todo(&mut app.store, &app.input.clone())?;
+                ops::create_todo(&mut app.store, &app.input.clone(), None)?;
                 app.input.clear();
                 app.refilter();
             } else if let Some(todo) = app.selected_todo() {

@@ -18,8 +18,8 @@ fn main() -> Result<()> {
     let mut store = Store::open(&dir)?;
 
     match cli::resolve_command(&cli, is_tty) {
-        Command::Create(title) => {
-            let id = ops::create_todo(&mut store, &title)?;
+        Command::Create { title, body } => {
+            let id = ops::create_todo(&mut store, &title, body.as_deref())?;
             println!("{id}");
         }
         Command::Edit { id, body } => {

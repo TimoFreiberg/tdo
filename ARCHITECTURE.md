@@ -57,6 +57,7 @@ Optional body content added via editor.
 | Command | Description |
 |---|---|
 | `tdo <text>` | Create a new todo with the given title. Prints the new ID to stdout |
+| `tdo add <text> --body <body>` | Create a new todo with title and body. Prints the new ID to stdout |
 | `tdo --edit <id>` | Open the todo file in `$EDITOR` (fallback: `vim`). Must also support non-interactive editing (e.g. `--edit <id> --title <text>` or accepting new content on stdin) so Claude Code can rewrite todos without spawning an editor |
 | `tdo --done <id>` | Mark a todo as done |
 | `tdo --delete <id>` | Delete a todo file (confirms if interactive) |

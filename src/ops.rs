@@ -8,7 +8,7 @@ use crate::todo::{Frontmatter, Status, Todo};
 use crate::util::stdout_is_tty;
 
 /// Create a new todo, returning the assigned ID.
-pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
+pub fn create_todo(store: &mut Store, title: &str, body: Option<&str>) -> Result<String> {
     let now: DateTime = DateTime::try_from(jiff::Zoned::now())?;
     let fm = Frontmatter {
         title: title.to_string(),
@@ -18,7 +18,7 @@ pub fn create_todo(store: &mut Store, title: &str) -> Result<String> {
         assigned_at: None,
         done_at: None,
     };
-    store.create(&fm, None)
+    store.create(&fm, body)
 }
 
 /// Mark a todo as done. Returns the updated todo.

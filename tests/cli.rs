@@ -222,3 +222,22 @@ fn delete_force_prints_feedback() {
     );
     assert!(stderr.contains(&id));
 }
+
+#[test]
+fn add_with_body() {
+    let t = TdoTest::new();
+    let _id = t.run_ok(&["add", "my title", "--body", "line one\nline two"]);
+
+    // Verify the file contains the body
+    let files = t.files();
+    assert_eq!(files.len(), 1);
+    let content = std::fs::read_to_string(t.dir.path().join(&files[0])).unwrap();
+    assert!(
+        content.contains("title: my title"),
+        "title should be set: {content}"
+    );
+    assert!(
+        content.contains("line one\nline two"),
+        "body should be set: {content}"
+    );
+}

@@ -18,8 +18,11 @@ pub enum SubCommand {
     /// Create a new todo
     Add {
         /// Words that become the title
-        #[arg(trailing_var_arg = true, required = true)]
+        #[arg(required = true)]
         text: Vec<String>,
+        /// Set body text (supports \n for newlines)
+        #[arg(long, value_name = "TEXT")]
+        body: Option<String>,
     },
     /// Open a todo in $EDITOR, or update body with --body
     Edit {
@@ -68,7 +71,7 @@ pub enum SubCommand {
 }
 
 pub enum Command {
-    Create(String),
+    Create { title: String, body: Option<String> },
     Edit {
         id: String,
         body: Option<String>,
@@ -90,7 +93,10 @@ pub enum Command {
 
 pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
     match &cli.command {
-        Some(SubCommand::Add { text }) => Command::Create(text.join(" ")),
+        Some(SubCommand::Add { text, body }) => Command::Create {
+            title: text.join(" "),
+            body: body.clone(),
+        },
         Some(SubCommand::Edit { id, body }) => Command::Edit {
             id: id.clone(),
             body: body.clone(),
