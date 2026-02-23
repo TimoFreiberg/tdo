@@ -8,6 +8,7 @@ A local todo manager. Stores todos as markdown files in `.todo/`.
 tdo                          # TUI (interactive) or list open todos (non-interactive)
 tdo some text here           # Create a todo with title "some text here"
 tdo add "title" --body "..." # Create a todo with title and body at once
+tdo view <id>                # View a todo's full details (metadata + body)
 tdo --edit <id>              # Open todo in $VISUAL/$EDITOR
 tdo --done <id>              # Mark todo as done
 tdo --reopen <id>            # Reopen a done todo

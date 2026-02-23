@@ -65,6 +65,7 @@ Optional body content added via editor.
 | `tdo --list --all` | List all todos including done (with GC) |
 | `tdo --assign <id> [name]` | Assign a todo, optionally to a named person |
 | `tdo --unassign <id>` | Remove assignment from a todo |
+| `tdo view <id>` | View a todo's full details (ID, title, status, timestamps, body) |
 
 ### Global flags
 

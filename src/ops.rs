@@ -130,6 +130,37 @@ pub fn unassign_todo(store: &mut Store, id: &str) -> Result<Todo> {
     Ok(todo)
 }
 
+/// View a todo's full content.
+pub fn view_todo(store: &Store, id: &str) -> Result<()> {
+    let todo = store.find_by_id(id)?;
+    let color = stdout_is_tty();
+
+    let mut out = io::stdout().lock();
+    if color {
+        writeln!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
+    } else {
+        writeln!(out, "{}  {}", todo.id, todo.title())?;
+    }
+    writeln!(out, "status:   {}", if todo.is_open() { "open" } else { "done" })?;
+    writeln!(out, "created:  {}", todo.frontmatter.created)?;
+    if let Some(ref assigned) = todo.frontmatter.assigned {
+        if assigned.is_empty() {
+            writeln!(out, "assigned: (unspecified)")?;
+        } else {
+            writeln!(out, "assigned: {assigned}")?;
+        }
+    }
+    if let Some(ref done_at) = todo.frontmatter.done_at {
+        writeln!(out, "done_at:  {done_at}")?;
+    }
+    if let Some(ref body) = todo.body {
+        writeln!(out)?;
+        writeln!(out, "{body}")?;
+    }
+    Ok(())
+}
+
+
 /// ANSI escape helpers — only used when stdout is a TTY.
 const DIM: &str = "\x1b[2m";
 const CYAN: &str = "\x1b[36m";

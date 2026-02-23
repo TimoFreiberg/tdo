@@ -241,3 +241,28 @@ fn add_with_body() {
         "body should be set: {content}"
     );
 }
+
+#[test]
+fn view_shows_todo_details() {
+    let t = TdoTest::new();
+    let id = t.run_ok(&["add", "fix", "login", "--body", "Check auth flow"]);
+    let output = t.run_ok(&["view", &id]);
+    assert!(output.contains(&id), "should contain ID: {output}");
+    assert!(output.contains("fix login"), "should contain title: {output}");
+    assert!(output.contains("status:   open"), "should contain status: {output}");
+    assert!(output.contains("created:"), "should contain created: {output}");
+    assert!(
+        output.contains("Check auth flow"),
+        "should contain body: {output}"
+    );
+}
+
+#[test]
+fn view_unknown_id_fails() {
+    let t = TdoTest::new();
+    let result = t.run_err(&["view", "ffff"]);
+    assert!(
+        result.contains("no todo found"),
+        "should error on unknown id: {result}"
+    );
+}

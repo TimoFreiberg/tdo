@@ -47,6 +47,7 @@ fn main() -> Result<()> {
             eprintln!("unassigned: {}  {}", todo.id, todo.title());
         }
         Command::List { all } => ops::list_todos(&mut store, all)?,
+        Command::View(id) => ops::view_todo(&store, &id)?,
         Command::PlainList => ops::list_todos(&mut store, false)?,
         Command::Tui => tui::run_tui(store)?,
     }
