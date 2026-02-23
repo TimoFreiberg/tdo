@@ -102,7 +102,11 @@ impl App {
                 .todos
                 .iter()
                 .enumerate()
-                .filter(|(_, t)| fuzzy_match(&self.input, t.title()))
+                .filter(|(_, t)| {
+                    let input_lower = self.input.to_lowercase();
+                    t.id.to_lowercase().starts_with(&input_lower)
+                        || fuzzy_match(&self.input, t.title())
+                })
                 .map(|(i, _)| i)
                 .collect();
         }
