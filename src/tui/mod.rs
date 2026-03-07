@@ -61,7 +61,11 @@ impl App {
 
     /// The index in the selectable list where filtered todos start.
     fn todo_start_index(&self) -> usize {
-        if self.has_create_line() { 1 } else { 0 }
+        if self.has_create_line() {
+            1
+        } else {
+            0
+        }
     }
 
     /// Returns the selected todo, if the selection is on a filtered todo item.
@@ -70,7 +74,9 @@ impl App {
         let start = self.todo_start_index();
         if sel >= start {
             let filtered_idx = sel - start;
-            self.filtered.get(filtered_idx).and_then(|&i| self.todos.get(i))
+            self.filtered
+                .get(filtered_idx)
+                .and_then(|&i| self.todos.get(i))
         } else {
             None
         }

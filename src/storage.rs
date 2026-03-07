@@ -118,8 +118,7 @@ impl Store {
         let idx = self.find_index(id)?;
         let todo = self.cache.remove(idx);
         let path = self.dir.join(&todo.filename);
-        fs::remove_file(&path)
-            .with_context(|| format!("failed to delete: {}", path.display()))?;
+        fs::remove_file(&path).with_context(|| format!("failed to delete: {}", path.display()))?;
         Ok(todo)
     }
 
@@ -156,8 +155,7 @@ impl Store {
             0 => Err(anyhow!("no todo found with id '{id}'")),
             1 => Ok(matches[0]),
             _ => {
-                let ids: Vec<&str> =
-                    matches.iter().map(|&i| self.cache[i].id.as_str()).collect();
+                let ids: Vec<&str> = matches.iter().map(|&i| self.cache[i].id.as_str()).collect();
                 Err(anyhow!("ambiguous id '{id}': matches {}", ids.join(", ")))
             }
         }

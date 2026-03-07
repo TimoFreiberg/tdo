@@ -95,9 +95,7 @@ pub fn edit_todo(
             .arg(&path)
             .status()
             .with_context(|| {
-                format!(
-                    "failed to run editor '{editor}': is it installed? Set $VISUAL or $EDITOR"
-                )
+                format!("failed to run editor '{editor}': is it installed? Set $VISUAL or $EDITOR")
             })?;
         if !status.success() {
             bail!("editor exited with status {status}");
@@ -141,7 +139,11 @@ pub fn view_todo(store: &Store, id: &str) -> Result<()> {
     } else {
         writeln!(out, "{}  {}", todo.id, todo.title())?;
     }
-    writeln!(out, "status:   {}", if todo.is_open() { "open" } else { "done" })?;
+    writeln!(
+        out,
+        "status:   {}",
+        if todo.is_open() { "open" } else { "done" }
+    )?;
     writeln!(out, "created:  {}", todo.frontmatter.created)?;
     if let Some(ref assigned) = todo.frontmatter.assigned {
         if assigned.is_empty() {
@@ -159,7 +161,6 @@ pub fn view_todo(store: &Store, id: &str) -> Result<()> {
     }
     Ok(())
 }
-
 
 /// ANSI escape helpers — only used when stdout is a TTY.
 const DIM: &str = "\x1b[2m";
@@ -268,7 +269,13 @@ fn write_done_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()>
         }
         writeln!(out, "{RESET}")?;
     } else {
-        writeln!(out, "{}  [done] {}{}", todo.id, todo.title(), assigned_suffix)?;
+        writeln!(
+            out,
+            "{}  [done] {}{}",
+            todo.id,
+            todo.title(),
+            assigned_suffix
+        )?;
     }
     Ok(())
 }

@@ -3,7 +3,12 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "tdo", version, about = "A local todo manager", after_help = "Titles are immutable after creation. To change a title, delete and recreate the todo.")]
+#[command(
+    name = "tdo",
+    version,
+    about = "A local todo manager",
+    after_help = "Titles are immutable after creation. To change a title, delete and recreate the todo."
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<SubCommand>,
@@ -73,26 +78,25 @@ pub enum SubCommand {
         /// Todo ID (or unique prefix)
         id: String,
     },
+    /// Print the number of todos
+    Count {
+        /// Include done todos
+        #[arg(long)]
+        all: bool,
+    },
 }
 
 pub enum Command {
     Create { title: String, body: Option<String> },
-    Edit {
-        id: String,
-        body: Option<String>,
-    },
+    Edit { id: String, body: Option<String> },
     Done(String),
     Reopen(String),
-    Delete {
-        id: String,
-        force: bool,
-    },
-    List {
-        all: bool,
-    },
+    Delete { id: String, force: bool },
+    List { all: bool },
     Assign { id: String, name: Option<String> },
     Unassign(String),
     View(String),
+    Count { all: bool },
     Tui,
     PlainList,
 }
@@ -120,6 +124,7 @@ pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
         },
         Some(SubCommand::Unassign { id }) => Command::Unassign(id.clone()),
         Some(SubCommand::View { id }) => Command::View(id.clone()),
+        Some(SubCommand::Count { all }) => Command::Count { all: *all },
         None if is_tty => Command::Tui,
         None => Command::PlainList,
     }

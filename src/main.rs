@@ -48,6 +48,14 @@ fn main() -> Result<()> {
         }
         Command::List { all } => ops::list_todos(&mut store, all)?,
         Command::View(id) => ops::view_todo(&store, &id)?,
+        Command::Count { all } => {
+            let count = if all {
+                store.list_all().len()
+            } else {
+                store.list_open().len()
+            };
+            println!("{count}");
+        }
         Command::PlainList => ops::list_todos(&mut store, false)?,
         Command::Tui => tui::run_tui(store)?,
     }

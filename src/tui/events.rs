@@ -39,10 +39,7 @@ fn resize_viewport(
     new_height: u16,
 ) -> Result<Terminal<CrosstermBackend<Stdout>>> {
     let area = terminal.get_frame().area();
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::cursor::MoveTo(0, area.y),
-    )?;
+    crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
     drop(terminal);
     let backend = CrosstermBackend::new(std::io::stdout());
     let mut new_terminal = Terminal::with_options(
@@ -160,10 +157,7 @@ fn handle_normal(
                 // Recreate the terminal so it picks up the (possibly
                 // changed) terminal size and redraws cleanly.
                 let area = terminal.get_frame().area();
-                crossterm::execute!(
-                    std::io::stdout(),
-                    crossterm::cursor::MoveTo(0, area.y),
-                )?;
+                crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
                 let new_height = app.viewport_height();
                 let backend = CrosstermBackend::new(std::io::stdout());
                 let mut new_terminal = Terminal::with_options(

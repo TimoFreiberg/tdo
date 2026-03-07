@@ -13,6 +13,7 @@ Parse `$ARGUMENTS` and dispatch:
 | *(empty)* | Run `tdo list`. If there are any, ask the user what they want to do next. If none, say so. |
 | `add <title> [--body TEXT]` | Create a new todo (optionally with body) |
 | `list` | Run `tdo list` (open only) or `tdo list --all` (include done). Note: listing triggers GC — done todos >7 days old are auto-deleted, stale assignments warn on stderr. |
+| `count` | Run `tdo count` (open only) or `tdo count --all` (include done). Prints the count as a plain number. |
 | `view <query>` | View a todo's full details |
 | `done <query>` | Mark a todo as done |
 | `reopen <query>` | Reopen a done todo |

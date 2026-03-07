@@ -16,6 +16,8 @@ tdo --delete <id>            # Delete todo file (prompts if interactive)
 tdo --delete <id> --force    # Delete without confirmation
 tdo --list                   # List open todos
 tdo --list --all             # List all todos including done
+tdo count                    # Print number of open todos
+tdo count --all              # Print number of all todos including done
 tdo --assign <id> [name]     # Assign todo (optionally to a person)
 tdo --unassign <id>          # Remove assignment from todo
 ```

@@ -63,6 +63,8 @@ Optional body content added via editor.
 | `tdo --delete <id>` | Delete a todo file (confirms if interactive) |
 | `tdo --list` | List open todos (with GC) |
 | `tdo --list --all` | List all todos including done (with GC) |
+| `tdo count` | Print the number of open todos |
+| `tdo count --all` | Print the number of all todos including done |
 | `tdo --assign <id> [name]` | Assign a todo, optionally to a named person |
 | `tdo --unassign <id>` | Remove assignment from a todo |
 | `tdo view <id>` | View a todo's full details (ID, title, status, timestamps, body) |

@@ -51,9 +51,15 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
 
     let mut title_spans = vec![
         Span::raw(" tdo  "),
-        Span::styled(format!("{open_count} open"), Style::default().fg(Color::Green)),
+        Span::styled(
+            format!("{open_count} open"),
+            Style::default().fg(Color::Green),
+        ),
         Span::styled(" · ", Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("{done_count} done"), Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!("{done_count} done"),
+            Style::default().fg(Color::DarkGray),
+        ),
     ];
     let skipped = app.store.skipped;
     if skipped > 0 {
@@ -91,10 +97,7 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
     let input_line = if app.input.is_empty() {
         Line::from(vec![
             Span::raw(INPUT_PREFIX),
-            Span::styled(
-                "Search or create...",
-                Style::default().fg(Color::DarkGray),
-            ),
+            Span::styled("Search or create...", Style::default().fg(Color::DarkGray)),
         ])
     } else {
         Line::from(format!("{INPUT_PREFIX}{}", app.input))
@@ -132,8 +135,7 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         items.push(ListItem::new(Line::from(spans)));
     }
 
-    let list = List::new(items)
-        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+    let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::REVERSED));
     f.render_stateful_widget(list, chunks[1], &mut app.list_state);
 
     // Always show cursor in the input field
