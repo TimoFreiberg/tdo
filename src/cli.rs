@@ -74,7 +74,8 @@ pub enum SubCommand {
         id: String,
     },
     /// View a todo's full content
-    View {
+    #[command(alias = "view", alias = "get")]
+    Show {
         /// Todo ID (or unique prefix)
         id: String,
     },
@@ -123,8 +124,8 @@ pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
             name: name.clone(),
         },
         Some(SubCommand::Unassign { id }) => Command::Unassign(id.clone()),
-        Some(SubCommand::View { id }) => Command::View(id.clone()),
         Some(SubCommand::Count { all }) => Command::Count { all: *all },
+        Some(SubCommand::Show { id }) => Command::View(id.clone()),
         None if is_tty => Command::Tui,
         None => Command::PlainList,
     }

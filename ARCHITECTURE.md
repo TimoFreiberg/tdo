@@ -67,7 +67,7 @@ Optional body content added via editor.
 | `tdo count --all` | Print the number of all todos including done |
 | `tdo --assign <id> [name]` | Assign a todo, optionally to a named person |
 | `tdo --unassign <id>` | Remove assignment from a todo |
-| `tdo view <id>` | View a todo's full details (ID, title, status, timestamps, body) |
+| `tdo show <id>` | View a todo's full details (ID, title, status, timestamps, body) |
 
 ### Global flags
 
