@@ -277,3 +277,54 @@ fn show_unknown_id_fails() {
         "should error on unknown id: {result}"
     );
 }
+
+#[test]
+fn malformed_file_is_skipped_with_warning() {
+    let t = TdoTest::new();
+    t.run_ok(&["add", "good todo"]);
+    t.write_raw("ab12-broken.md", "garbage, not yaml at all");
+
+    let output = t.run(&["list"]);
+    assert!(output.status.success(), "should succeed despite bad file");
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stdout.contains("good todo"), "good todo should appear");
+    assert!(
+        !stdout.contains("ab12"),
+        "broken file should not appear in list"
+    );
+    assert!(
+        stderr.contains("warning: skipping"),
+        "should warn about the bad file: {stderr}"
+    );
+    assert!(
+        stderr.contains("1 malformed todo file skipped"),
+        "should print summary: {stderr}"
+    );
+}
+
+#[test]
+fn multiple_malformed_files_reports_count() {
+    let t = TdoTest::new();
+    t.write_raw("aa11-bad1.md", "no frontmatter");
+    t.write_raw("bb22-bad2.md", "---\ntitle: missing status\n---\n");
+
+    let output = t.run(&["list"]);
+    assert!(output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("2 malformed todo files skipped"),
+        "should report plural count: {stderr}"
+    );
+}
+
+#[test]
+fn malformed_file_does_not_affect_count() {
+    let t = TdoTest::new();
+    t.run_ok(&["add", "real one"]);
+    t.run_ok(&["add", "real two"]);
+    t.write_raw("ab12-broken.md", "not valid");
+
+    let output = t.run_ok(&["count"]);
+    assert_eq!(output, "2", "count should only include valid todos");
+}

@@ -47,6 +47,11 @@ impl TdoTest {
         String::from_utf8(output.stderr).unwrap().trim().to_string()
     }
 
+    /// Write a raw file into the todo directory (for testing malformed files).
+    pub fn write_raw(&self, filename: &str, content: &str) {
+        std::fs::write(self.dir.path().join(filename), content).unwrap();
+    }
+
     /// List todo files (excluding hidden files like .lock) in the todo directory.
     pub fn files(&self) -> Vec<String> {
         std::fs::read_dir(self.dir.path())

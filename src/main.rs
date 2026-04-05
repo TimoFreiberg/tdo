@@ -16,6 +16,13 @@ fn main() -> Result<()> {
     let is_tty = util::stdout_is_tty();
     let dir = Store::resolve_dir(cli.dir.as_deref());
     let mut store = Store::open(&dir)?;
+    if store.skipped > 0 {
+        eprintln!(
+            "warning: {} malformed todo file{} skipped",
+            store.skipped,
+            if store.skipped == 1 { "" } else { "s" }
+        );
+    }
 
     match cli::resolve_command(&cli, is_tty) {
         Command::Create { title, body } => {
