@@ -1,6 +1,6 @@
 use std::io::{self, BufRead, Write};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use jiff::civil::DateTime;
 
 use crate::storage::Store;

@@ -61,11 +61,7 @@ impl App {
 
     /// The index in the selectable list where filtered todos start.
     fn todo_start_index(&self) -> usize {
-        if self.has_create_line() {
-            1
-        } else {
-            0
-        }
+        if self.has_create_line() { 1 } else { 0 }
     }
 
     /// Returns the selected todo, if the selection is on a filtered todo item.

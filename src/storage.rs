@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fs::{self, File, TryLockError};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 
 use crate::todo::{self, Frontmatter, Todo};
 use crate::util::{generate_id, slugify};

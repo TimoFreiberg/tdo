@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use is_terminal::IsTerminal;
 use rand::RngExt;
 
