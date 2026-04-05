@@ -17,12 +17,14 @@ pub fn run_event_loop(
     loop {
         terminal.draw(|f| super::ui::draw(f, &mut *app))?;
         match event::read()? {
-            Event::Key(key) => {
-                if handle_key(&mut terminal, app, key)? == ControlFlow::Break(()) {
-                    return Ok(terminal);
+            Event::Key(key) => match handle_key(&mut terminal, app, key)? {
+                ControlFlow::Break(()) => return Ok(terminal),
+                ControlFlow::Continue(dirty) => {
+                    if dirty {
+                        app.reload();
+                    }
                 }
-                app.reload();
-            }
+            },
             Event::Resize(_, _) => {}
             _ => continue,
         }
@@ -34,37 +36,43 @@ pub fn run_event_loop(
     }
 }
 
+/// Create a fresh inline terminal, clearing the viewport area so old
+/// content doesn't bleed through.
+fn create_inline_terminal(
+    cursor_y: u16,
+    height: u16,
+) -> Result<Terminal<CrosstermBackend<Stdout>>> {
+    crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, cursor_y),)?;
+    let backend = CrosstermBackend::new(std::io::stdout());
+    let mut terminal = Terminal::with_options(
+        backend,
+        TerminalOptions {
+            viewport: Viewport::Inline(height),
+        },
+    )?;
+    let area = terminal.get_frame().area();
+    crossterm::execute!(
+        std::io::stdout(),
+        crossterm::cursor::MoveTo(area.x, area.y),
+        crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
+    )?;
+    Ok(terminal)
+}
+
 fn resize_viewport(
     mut terminal: Terminal<CrosstermBackend<Stdout>>,
     new_height: u16,
 ) -> Result<Terminal<CrosstermBackend<Stdout>>> {
     let area = terminal.get_frame().area();
-    crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
     drop(terminal);
-    let backend = CrosstermBackend::new(std::io::stdout());
-    let mut new_terminal = Terminal::with_options(
-        backend,
-        TerminalOptions {
-            viewport: Viewport::Inline(new_height),
-        },
-    )?;
-    // Clear the viewport area so the physical screen matches the new
-    // terminal's empty previous-frame buffer. Without this, default/space
-    // cells are skipped by the diff and old border chars bleed through.
-    let new_area = new_terminal.get_frame().area();
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::cursor::MoveTo(new_area.x, new_area.y),
-        crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
-    )?;
-    Ok(new_terminal)
+    create_inline_terminal(area.y, new_height)
 }
 
 fn handle_key(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     app: &mut App,
     key: KeyEvent,
-) -> Result<ControlFlow<()>> {
+) -> Result<ControlFlow<(), bool>> {
     match &app.mode {
         Mode::Normal => handle_normal(terminal, app, key),
         Mode::ConfirmDelete { .. } => handle_confirm_delete(app, key),
@@ -75,7 +83,7 @@ fn handle_normal(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     app: &mut App,
     key: KeyEvent,
-) -> Result<ControlFlow<()>> {
+) -> Result<ControlFlow<(), bool>> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
     // Ctrl+key shortcuts (always active)
@@ -85,6 +93,7 @@ fn handle_normal(
             KeyCode::Char('a') => {
                 app.show_all = !app.show_all;
                 app.reload();
+                return Ok(ControlFlow::Continue(false));
             }
             KeyCode::Char('d') => {
                 if let Some(todo) = app.selected_todo() {
@@ -95,6 +104,7 @@ fn handle_normal(
                     } else {
                         ops::reopen_todo(&mut app.store, &id)?;
                     }
+                    return Ok(ControlFlow::Continue(true));
                 }
             }
             KeyCode::Char('s') => {
@@ -106,6 +116,7 @@ fn handle_normal(
                     } else {
                         ops::assign_todo(&mut app.store, &id, None)?;
                     }
+                    return Ok(ControlFlow::Continue(true));
                 }
             }
             KeyCode::Char('x') => {
@@ -117,7 +128,7 @@ fn handle_normal(
             }
             _ => {}
         }
-        return Ok(ControlFlow::Continue(()));
+        return Ok(ControlFlow::Continue(false));
     }
 
     // Non-ctrl keys: input field is always active for typing
@@ -135,6 +146,7 @@ fn handle_normal(
                 ops::create_todo(&mut app.store, &app.input.clone(), None)?;
                 app.input.clear();
                 app.refilter();
+                return Ok(ControlFlow::Continue(true));
             } else if let Some(todo) = app.selected_todo() {
                 let id = todo.id.clone();
                 // Suspend TUI for editor
@@ -157,22 +169,8 @@ fn handle_normal(
                 // Recreate the terminal so it picks up the (possibly
                 // changed) terminal size and redraws cleanly.
                 let area = terminal.get_frame().area();
-                crossterm::execute!(std::io::stdout(), crossterm::cursor::MoveTo(0, area.y),)?;
-                let new_height = app.viewport_height();
-                let backend = CrosstermBackend::new(std::io::stdout());
-                let mut new_terminal = Terminal::with_options(
-                    backend,
-                    TerminalOptions {
-                        viewport: Viewport::Inline(new_height),
-                    },
-                )?;
-                let new_area = new_terminal.get_frame().area();
-                crossterm::execute!(
-                    std::io::stdout(),
-                    crossterm::cursor::MoveTo(new_area.x, new_area.y),
-                    crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
-                )?;
-                *terminal = new_terminal;
+                *terminal = create_inline_terminal(area.y, app.viewport_height())?;
+                return Ok(ControlFlow::Continue(true));
             }
         }
         KeyCode::Esc => {
@@ -187,25 +185,26 @@ fn handle_normal(
         KeyCode::Up => app.cursor_up(),
         _ => {}
     }
-    Ok(ControlFlow::Continue(()))
+    Ok(ControlFlow::Continue(false))
 }
 
-fn handle_confirm_delete(app: &mut App, key: KeyEvent) -> Result<ControlFlow<()>> {
+fn handle_confirm_delete(app: &mut App, key: KeyEvent) -> Result<ControlFlow<(), bool>> {
     let id = if let Mode::ConfirmDelete { ref id, .. } = app.mode {
         id.clone()
     } else {
-        return Ok(ControlFlow::Continue(()));
+        return Ok(ControlFlow::Continue(false));
     };
 
     match key.code {
         KeyCode::Char('y') | KeyCode::Enter => {
             app.store.delete(&id)?;
             app.mode = Mode::Normal;
+            return Ok(ControlFlow::Continue(true));
         }
         KeyCode::Char('n') | KeyCode::Esc => {
             app.mode = Mode::Normal;
         }
         _ => {}
     }
-    Ok(ControlFlow::Continue(()))
+    Ok(ControlFlow::Continue(false))
 }

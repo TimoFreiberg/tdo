@@ -42,6 +42,14 @@ impl Todo {
     pub fn is_assigned(&self) -> bool {
         self.frontmatter.assigned.is_some()
     }
+
+    pub fn assigned_suffix(&self) -> String {
+        match &self.frontmatter.assigned {
+            Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
+            Some(_) => " (assigned)".to_string(),
+            None => String::new(),
+        }
+    }
 }
 
 pub fn parse_file(raw: &str) -> Result<(Frontmatter, Option<String>)> {

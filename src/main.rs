@@ -24,7 +24,7 @@ fn main() -> Result<()> {
         );
     }
 
-    match cli::resolve_command(&cli, is_tty) {
+    match cli::resolve_command(cli, is_tty) {
         Command::Create { title, body } => {
             let id = ops::create_todo(&mut store, &title, body.as_deref())?;
             println!("{id}");

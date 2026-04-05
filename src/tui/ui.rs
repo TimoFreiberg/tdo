@@ -126,11 +126,10 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
             spans.push(Span::raw(format!("{}  {}", todo.id, todo.title())));
         }
         if todo.is_assigned() {
-            let suffix = match &todo.frontmatter.assigned {
-                Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
-                _ => " (assigned)".to_string(),
-            };
-            spans.push(Span::styled(suffix, Style::default().fg(Color::Magenta)));
+            spans.push(Span::styled(
+                todo.assigned_suffix(),
+                Style::default().fg(Color::Magenta),
+            ));
         }
         items.push(ListItem::new(Line::from(spans)));
     }

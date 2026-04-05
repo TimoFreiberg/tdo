@@ -102,30 +102,21 @@ pub enum Command {
     PlainList,
 }
 
-pub fn resolve_command(cli: &Cli, is_tty: bool) -> Command {
-    match &cli.command {
+pub fn resolve_command(cli: Cli, is_tty: bool) -> Command {
+    match cli.command {
         Some(SubCommand::Add { text, body }) => Command::Create {
             title: text.join(" "),
-            body: body.clone(),
+            body,
         },
-        Some(SubCommand::Edit { id, body }) => Command::Edit {
-            id: id.clone(),
-            body: body.clone(),
-        },
-        Some(SubCommand::Done { id }) => Command::Done(id.clone()),
-        Some(SubCommand::Reopen { id }) => Command::Reopen(id.clone()),
-        Some(SubCommand::Delete { id, force }) => Command::Delete {
-            id: id.clone(),
-            force: *force,
-        },
-        Some(SubCommand::List { all }) => Command::List { all: *all },
-        Some(SubCommand::Assign { id, name }) => Command::Assign {
-            id: id.clone(),
-            name: name.clone(),
-        },
-        Some(SubCommand::Unassign { id }) => Command::Unassign(id.clone()),
-        Some(SubCommand::Count { all }) => Command::Count { all: *all },
-        Some(SubCommand::Show { id }) => Command::View(id.clone()),
+        Some(SubCommand::Edit { id, body }) => Command::Edit { id, body },
+        Some(SubCommand::Done { id }) => Command::Done(id),
+        Some(SubCommand::Reopen { id }) => Command::Reopen(id),
+        Some(SubCommand::Delete { id, force }) => Command::Delete { id, force },
+        Some(SubCommand::List { all }) => Command::List { all },
+        Some(SubCommand::Assign { id, name }) => Command::Assign { id, name },
+        Some(SubCommand::Unassign { id }) => Command::Unassign(id),
+        Some(SubCommand::Count { all }) => Command::Count { all },
+        Some(SubCommand::Show { id }) => Command::View(id),
         None if is_tty => Command::Tui,
         None => Command::PlainList,
     }

@@ -224,50 +224,35 @@ pub fn list_todos(store: &mut Store, all: bool) -> Result<()> {
     let color = stdout_is_tty();
     if all {
         for todo in store.list_all() {
-            if todo.is_open() {
-                write_todo(&mut out, todo, color)?;
-            } else {
-                write_done_todo(&mut out, todo, color)?;
-            }
+            write_todo_line(&mut out, todo, color)?;
         }
     } else {
         for todo in store.list_open() {
-            write_todo(&mut out, todo, color)?;
+            write_todo_line(&mut out, todo, color)?;
         }
     }
     Ok(())
 }
 
-fn write_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
-    let assigned_suffix = match &todo.frontmatter.assigned {
-        Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
-        Some(_) => " (assigned)".to_string(),
-        None => String::new(),
-    };
-    if color {
-        write!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
-        if !assigned_suffix.is_empty() {
-            write!(out, "{MAGENTA}{assigned_suffix}{RESET}")?;
+fn write_todo_line(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
+    let assigned_suffix = todo.assigned_suffix();
+    if todo.is_open() {
+        if color {
+            write!(out, "{CYAN}{}{RESET}  {}", todo.id, todo.title())?;
+            if !assigned_suffix.is_empty() {
+                write!(out, "{MAGENTA}{assigned_suffix}{RESET}")?;
+            }
+            writeln!(out)?;
+        } else {
+            writeln!(out, "{}  {}{}", todo.id, todo.title(), assigned_suffix)?;
         }
-        writeln!(out)?;
-    } else {
-        writeln!(out, "{}  {}{}", todo.id, todo.title(), assigned_suffix)?;
-    }
-    Ok(())
-}
-
-fn write_done_todo(out: &mut impl Write, todo: &Todo, color: bool) -> Result<()> {
-    let assigned_suffix = match &todo.frontmatter.assigned {
-        Some(name) if !name.is_empty() => format!(" (assigned: {name})"),
-        Some(_) => " (assigned)".to_string(),
-        None => String::new(),
-    };
-    if color {
-        write!(out, "{DIM}{}  [done] {}", todo.id, todo.title())?;
-        if !assigned_suffix.is_empty() {
-            write!(out, "{assigned_suffix}")?;
-        }
-        writeln!(out, "{RESET}")?;
+    } else if color {
+        writeln!(
+            out,
+            "{DIM}{}  [done] {}{assigned_suffix}{RESET}",
+            todo.id,
+            todo.title()
+        )?;
     } else {
         writeln!(
             out,

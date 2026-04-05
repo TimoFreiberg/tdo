@@ -100,14 +100,13 @@ impl App {
         if self.input.is_empty() {
             self.filtered = (0..self.todos.len()).collect();
         } else {
+            let input_lower = self.input.to_lowercase();
             self.filtered = self
                 .todos
                 .iter()
                 .enumerate()
                 .filter(|(_, t)| {
-                    let input_lower = self.input.to_lowercase();
-                    t.id.to_lowercase().starts_with(&input_lower)
-                        || fuzzy_match(&self.input, t.title())
+                    t.id.starts_with(&*input_lower) || fuzzy_match(&self.input, t.title())
                 })
                 .map(|(i, _)| i)
                 .collect();
@@ -213,7 +212,7 @@ pub fn run_tui(store: Store) -> Result<()> {
     let stdout = std::io::stdout();
     let backend = CrosstermBackend::new(stdout);
 
-    let app = App::new(store);
+    let mut app = App::new(store);
     let height = app.viewport_height();
 
     let terminal = Terminal::with_options(
@@ -222,8 +221,6 @@ pub fn run_tui(store: Store) -> Result<()> {
             viewport: Viewport::Inline(height),
         },
     )?;
-
-    let mut app = app;
     let result = events::run_event_loop(terminal, &mut app);
 
     // Disable explicitly so cursor positioning works in cooked mode.
